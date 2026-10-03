@@ -1,0 +1,31 @@
+<p-dialog
+  [header]="dateLabel"
+  [visible]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(560px, calc(100vw - 24px))' }"
+  styleClass="day-events-dialog"
+  (visibleChange)="onVisibleChange($event)"
+>
+  <div class="day-event-list">
+    @for (occurrence of events; track occurrence.eventId + occurrence.startDate) {
+      <button class="day-event-row" type="button" (click)="eventSelected.emit(occurrence)">
+        <span class="event-color" [style.backgroundColor]="categoryColor(occurrence.event)"></span>
+        <span class="event-row-time">
+          @if (occurrence.event.allDay) {
+            Todo el día
+          } @else {
+            {{ occurrence.event.startTime ?? '' }}
+            @if (occurrence.event.startTime && occurrence.event.endTime) { <span>–</span> }
+            {{ occurrence.event.endTime ?? '' }}
+          }
+        </span>
+        <span class="event-row-title">{{ occurrence.event.title }}</span>
+        <i class="pi pi-angle-right" aria-hidden="true"></i>
+      </button>
+    } @empty {
+      <p class="empty-events">No hay eventos para este día.</p>
+    }
+  </div>
+</p-dialog>

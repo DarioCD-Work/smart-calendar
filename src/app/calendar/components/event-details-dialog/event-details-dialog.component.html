@@ -1,0 +1,84 @@
+<p-dialog
+  [header]="occurrence?.event?.title ?? 'Evento'"
+  [visible]="visible && occurrence !== null"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(520px, calc(100vw - 24px))' }"
+  styleClass="event-details-dialog"
+  (visibleChange)="onVisibleChange($event)"
+>
+  @if (occurrence; as item) {
+    <div class="event-details">
+      <p class="event-date">{{ formatDateRange(item.startDate, item.endDate) }}</p>
+
+      @if (item.event.allDay) {
+        <p class="event-time">Todo el día</p>
+      } @else if (item.event.startTime || item.event.endTime) {
+        <p class="event-time">
+          {{ item.event.startTime ?? '' }}
+          @if (item.event.startTime && item.event.endTime) { <span>–</span> }
+          {{ item.event.endTime ?? '' }}
+        </p>
+      }
+
+      @if (category; as eventCategory) {
+        <p class="event-category">
+          <span class="category-dot" [style.backgroundColor]="eventCategory.color"></span>
+          {{ eventCategory.name }}
+        </p>
+      }
+
+      @if (item.event.notes) {
+        <p class="event-notes">{{ item.event.notes }}</p>
+      }
+
+      @if (item.event.recurrence; as recurrence) {
+        <section class="series-details">
+          <strong>Serie recurrente</strong>
+          <span>{{ recurrenceLabel(recurrence) }}</span>
+          <span>Desde {{ formatDate(item.event.startDate) }}</span>
+          @if (recurrence.endDate) {
+            <span>Hasta {{ formatDate(recurrence.endDate) }}</span>
+          }
+          <small>Editar o eliminar afectará a toda la serie.</small>
+        </section>
+      }
+
+      @if (confirmingDelete) {
+        <div class="delete-confirmation" role="alertdialog" aria-label="Confirmar eliminación">
+          <p>
+            @if (item.event.recurrence) {
+              ¿Eliminar toda la serie de este evento?
+            } @else {
+              ¿Eliminar este evento?
+            }
+          </p>
+          <div class="confirmation-actions">
+            <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="confirmingDelete = false" />
+            <p-button label="Eliminar" severity="danger" icon="pi pi-trash" (onClick)="requestDelete()" />
+          </div>
+        </div>
+      }
+
+      <div class="details-actions">
+        <p-button
+          [label]="item.event.recurrence ? 'Editar serie' : 'Editar'"
+          icon="pi pi-pencil"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="editRequested.emit(item)"
+        />
+        @if (!confirmingDelete) {
+          <p-button
+            [label]="item.event.recurrence ? 'Eliminar serie' : 'Eliminar'"
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            (onClick)="requestDelete()"
+          />
+        }
+      </div>
+    </div>
+  }
+</p-dialog>

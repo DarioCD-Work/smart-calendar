@@ -1,0 +1,98 @@
+:host ::ng-deep .category-settings-dialog .p-dialog-content {
+  padding: 4px 22px 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.category-settings-list {
+  display: grid;
+  gap: 6px;
+}
+
+.category-setting-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  padding: 6px 4px;
+  border-bottom: 1px solid #e1e8e4;
+}
+
+.category-current-swatch {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(25, 58, 54, 0.2);
+  border-radius: 50%;
+}
+
+.category-setting-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: #193a36;
+}
+
+.category-setting-copy strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-setting-copy code {
+  color: #687975;
+  font-size: 12px;
+}
+
+.category-color-control {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-color-control > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:host ::ng-deep .category-color-picker .p-colorpicker-preview {
+  width: 52px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid #d0d9d4;
+  border-radius: 7px;
+}
+
+.category-settings-error {
+  margin: 12px 0 0;
+  color: #a33b36;
+  font-size: 14px;
+}
+
+.category-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 15px;
+}
+
+:host ::ng-deep .category-settings-actions .p-button {
+  min-width: 104px;
+  min-height: 46px;
+}
+
+@media (max-width: 520px) {
+  :host ::ng-deep .category-settings-dialog .p-dialog-content {
+    padding-inline: 14px;
+  }
+
+  .category-setting-row {
+    min-height: 62px;
+    gap: 8px;
+  }
+}

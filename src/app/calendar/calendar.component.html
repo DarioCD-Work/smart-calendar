@@ -1,0 +1,176 @@
+<main class="calendar-shell">
+  @if (storageError(); as error) {
+    <p class="storage-error" role="alert">{{ error }}</p>
+  }
+
+  <header class="calendar-toolbar" aria-label="Navegación del calendario">
+    <p-button
+      icon="pi pi-chevron-left"
+      severity="secondary"
+      [text]="true"
+      styleClass="month-arrow"
+      ariaLabel="Mes anterior"
+      (onClick)="navigateMonth(-1)"
+    />
+
+    <h1 class="month-title">{{ monthLabel() }}</h1>
+
+    <p-button
+      icon="pi pi-chevron-right"
+      severity="secondary"
+      [text]="true"
+      styleClass="month-arrow"
+      ariaLabel="Mes siguiente"
+      (onClick)="navigateMonth(1)"
+    />
+
+    <p-button
+      label="Hoy"
+      severity="secondary"
+      [outlined]="true"
+      styleClass="today-button"
+      (onClick)="goToToday()"
+    />
+
+    <p-button
+      icon="pi pi-cog"
+      severity="secondary"
+      [text]="true"
+      styleClass="categories-button"
+      ariaLabel="Configurar categorías"
+      (onClick)="openCategorySettings()"
+    />
+  </header>
+
+  <section class="month-view" aria-label="Vista mensual">
+    <div class="weekday-row" role="row">
+      @for (weekday of weekdays; track weekday) {
+        <div class="weekday" role="columnheader">{{ weekday }}</div>
+      }
+    </div>
+
+    <div
+      class="days-grid"
+      #daysGrid
+      role="grid"
+      aria-label="Días del mes"
+      [style.grid-template-rows]="'repeat(' + weekCount() + ', minmax(0, 1fr))'"
+    >
+      @for (week of weeks(); track week.index) {
+        <div class="week-row">
+          @for (dayView of week.days; track dayView.day.date.getTime()) {
+            <div
+              class="day-cell"
+              role="gridcell"
+              tabindex="0"
+              [class.outside-month]="!dayView.day.isCurrentMonth"
+              [class.past]="dayView.day.isPast"
+              [class.today]="dayView.day.isToday"
+              [class.future]="dayView.day.isFuture"
+              [class.selected]="dayView.day.isSelected"
+              [style.--occupied-lane-count]="dayView.occupiedLaneCount"
+              [attr.aria-label]="dayView.day.accessibleLabel + ((occurrencesByDate().get(dayView.day.dateKey)?.length ?? 0) ? ', ' + occurrencesByDate().get(dayView.day.dateKey)?.length + ' eventos' : '')"
+              [attr.aria-selected]="dayView.day.isSelected"
+              (click)="openCreateEvent(dayView.day)"
+              (keydown)="onDayCellKeydown($event, dayView.day)"
+            >
+              <button
+                class="day-date-button"
+                type="button"
+                [attr.aria-label]="'Crear evento el ' + dayView.day.accessibleLabel"
+                (click)="openCreateEvent(dayView.day); $event.stopPropagation()"
+              >
+                <span class="day-number">{{ dayView.day.dayNumber }}</span>
+              </button>
+
+              <div class="day-events">
+                @for (occurrence of dayView.singleDayOccurrences; track occurrence.eventId + occurrence.startDate) {
+                  <button
+                    class="event-chip"
+                    type="button"
+                    [style.--event-color]="categoryColor(occurrence.event)"
+                    [attr.aria-label]="(eventTime(occurrence.event) ? eventTime(occurrence.event) + ' ' : '') + occurrence.event.title"
+                    (click)="openEventDetails($event, occurrence)"
+                  >
+                    <span class="event-dot" aria-hidden="true"></span>
+                    @if (eventTime(occurrence.event)) {
+                      <span class="event-time">{{ eventTime(occurrence.event) }}</span>
+                    }
+                    <span class="event-title">{{ occurrence.event.title }}</span>
+                  </button>
+                }
+
+                @if (dayView.hiddenEventCount > 0) {
+                  <button class="more-events" type="button" (click)="openDayEvents($event, dayView.day.dateKey)">
+                    +{{ dayView.hiddenEventCount }} más
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="week-event-layer" aria-label="Eventos de varios días">
+            @for (segment of week.segments; track segment.eventId + segment.occurrenceStartDate) {
+              <button
+                class="multi-day-bar"
+                type="button"
+                [class.segment-start]="segment.isStart"
+                [class.segment-end]="segment.isEnd"
+                [style.grid-column]="(segment.startColumn + 1) + ' / ' + (segment.endColumn + 2)"
+                [style.grid-row]="segment.lane + 1"
+                [style.--event-color]="categoryColor(segment.occurrence.event)"
+                [attr.aria-label]="segment.occurrence.event.title + ', ' + segment.occurrence.startDate + ' a ' + segment.occurrence.endDate"
+                (click)="openEventDetails($event, segment.occurrence)"
+              >
+                @if (segment.isStart) {
+                  <span class="multi-day-title">{{ segment.occurrence.event.title }}</span>
+                } @else {
+                  <i class="pi pi-angle-left continuation-icon" aria-hidden="true"></i>
+                }
+                @if (!segment.isEnd) {
+                  <i class="pi pi-angle-right continuation-icon" aria-hidden="true"></i>
+                }
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <app-event-editor-dialog
+    [visible]="editorVisible()"
+    [event]="eventBeingEdited()"
+    [initialDate]="editorDate() ?? ''"
+    [categories]="categories()"
+    [storageError]="editorError()"
+    (saved)="saveEvent($event)"
+    (closed)="closeEditor()"
+  />
+
+  <app-event-details-dialog
+    [visible]="detailsOccurrence() !== null"
+    [occurrence]="detailsOccurrence()"
+    [categories]="categories()"
+    (closed)="closeDetails()"
+    (editRequested)="editOccurrence($event)"
+    (deleteRequested)="deleteOccurrence($event)"
+  />
+
+  <app-day-events-dialog
+    [visible]="moreEventsDate() !== null"
+    [date]="moreEventsDate()"
+    [events]="selectedDayOccurrences()"
+    [categories]="categories()"
+    (closed)="closeDayEvents()"
+    (eventSelected)="showOccurrenceDetails($event)"
+  />
+
+  <app-category-settings-dialog
+    [visible]="categorySettingsVisible()"
+    [categories]="categories()"
+    [error]="categorySettingsError()"
+    (closed)="closeCategorySettings()"
+    (colorChanged)="updateCategoryColor($event)"
+  />
+</main>

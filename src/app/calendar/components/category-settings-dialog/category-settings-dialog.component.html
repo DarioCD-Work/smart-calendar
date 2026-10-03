@@ -1,0 +1,42 @@
+<p-dialog
+  header="Categorías"
+  [visible]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(480px, calc(100vw - 32px))' }"
+  styleClass="category-settings-dialog"
+  (visibleChange)="onVisibleChange($event)"
+>
+  <div class="category-settings-list">
+    @for (category of categories; track category.id) {
+      <div class="category-setting-row">
+        <span class="category-current-swatch" [style.backgroundColor]="category.color" aria-hidden="true"></span>
+        <div class="category-setting-copy">
+          <strong>{{ category.name }}</strong>
+          <code>{{ categoryColorCode(category) }}</code>
+        </div>
+        <label class="category-color-control">
+          <span>Color de {{ category.name }}</span>
+          <p-colorPicker
+            [ngModel]="category.color"
+            (ngModelChange)="updateColor(category, $event)"
+            format="hex"
+            appendTo="body"
+            [baseZIndex]="1300"
+            [inputId]="'category-color-' + category.id"
+            styleClass="category-color-picker"
+          />
+        </label>
+      </div>
+    }
+  </div>
+
+  @if (error) {
+    <p class="category-settings-error" role="alert">{{ error }}</p>
+  }
+
+  <div class="category-settings-actions">
+    <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="requestClose()" />
+  </div>
+</p-dialog>
