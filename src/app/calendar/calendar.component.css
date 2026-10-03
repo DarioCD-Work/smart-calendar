@@ -1,0 +1,561 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.calendar-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  color: #193a36;
+}
+
+.calendar-toolbar {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px auto 52px;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  min-height: 72px;
+  padding: 0 2px 12px;
+  border-bottom: 1px solid rgba(25, 58, 54, 0.18);
+}
+
+.month-title {
+  margin: 0;
+  color: #193a36;
+  font-family: 'Libre Baskerville', Georgia, serif;
+  font-size: 27px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+}
+
+:host ::ng-deep .month-arrow.p-button {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 6px;
+  color: #193a36;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 1px 3px rgba(25, 58, 54, 0.08);
+}
+
+:host ::ng-deep .month-arrow.p-button .p-button-icon {
+  font-size: 18px;
+}
+
+:host ::ng-deep .today-button.p-button {
+  min-width: 76px;
+  min-height: 48px;
+  border-color: rgba(25, 58, 54, 0.3);
+  border-radius: 6px;
+  color: #193a36;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .categories-button.p-button {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border-radius: 6px;
+  color: #193a36;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+:host ::ng-deep .categories-button.p-button .p-button-icon {
+  font-size: 18px;
+}
+
+.month-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(25, 58, 54, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 32px rgba(25, 58, 54, 0.07);
+}
+
+.weekday-row,
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekday-row {
+  flex: 0 0 42px;
+  color: #f4f7f4;
+  background: #244b45;
+}
+
+.weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.weekday:last-child {
+  border-right: 0;
+}
+
+.days-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.day-cell {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border: 0;
+  border-right: 1px solid rgba(25, 58, 54, 0.14);
+  border-bottom: 1px solid rgba(25, 58, 54, 0.14);
+  border-radius: 0;
+  color: #193a36;
+  background: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.day-cell:nth-child(7n) {
+  border-right: 0;
+}
+
+.day-cell:nth-last-child(-n + 7) {
+  border-bottom: 0;
+}
+
+.day-cell.future {
+  color: #193a36;
+  background: #fff;
+}
+
+.day-cell.past {
+  color: #78847e;
+  background: #edf0ee;
+}
+
+.day-cell.outside-month {
+  color: #9aa5a0;
+  background: #f3f5f3;
+}
+
+.day-cell:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 3px solid #e7825c;
+  outline-offset: -4px;
+}
+
+.day-number {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.day-cell.today {
+  color: #1c4b2d;
+  background: #e4f0e5;
+  box-shadow: inset 0 0 0 2px #75a57d;
+}
+
+.day-cell.today .day-number {
+  color: #1c4b2d;
+  background: #cbe3ce;
+  font-weight: 700;
+}
+
+.day-cell.selected .day-number {
+  outline: 2px solid #244b45;
+  outline-offset: 2px;
+  font-weight: 700;
+}
+
+.day-cell.today.selected .day-number {
+  outline-color: #477c50;
+}
+
+@media (max-width: 520px) {
+  .calendar-shell {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .calendar-toolbar {
+    grid-template-columns: 44px minmax(0, 1fr) 44px auto 44px;
+    gap: 6px;
+    min-height: 62px;
+    padding-bottom: 8px;
+  }
+
+  .month-title {
+    font-size: 21px;
+  }
+
+  :host ::ng-deep .month-arrow.p-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  :host ::ng-deep .today-button.p-button {
+    min-width: 62px;
+    min-height: 44px;
+    padding: 0 10px;
+  }
+
+  :host ::ng-deep .categories-button.p-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .month-view {
+    margin-top: 8px;
+  }
+
+  .weekday-row {
+    flex-basis: 36px;
+  }
+
+  .weekday {
+    font-size: 11px;
+  }
+
+  .day-cell {
+    padding: 6px 3px;
+  }
+
+  .day-number {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    font-size: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .day-number {
+    transition: none;
+  }
+}
+
+.storage-error {
+  flex: 0 0 auto;
+  margin: 0 0 8px;
+  padding: 9px 12px;
+  border-left: 3px solid #a33b36;
+  background: #fff5f2;
+  color: #842f2c;
+  font-size: 14px;
+}
+
+.day-cell {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 8px;
+}
+
+.day-date-button {
+  display: flex;
+  width: max-content;
+  min-height: 38px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.day-events {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.event-chip {
+  display: flex;
+  flex: 0 0 24px;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 1px 5px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--event-color, #687975) 34%, white);
+  border-left: 3px solid var(--event-color, #687975);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--event-color, #687975) 12%, white);
+  color: #24433a;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.event-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--event-color, #687975);
+}
+
+.event-time {
+  flex: 0 0 auto;
+  color: #566b61;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more-events {
+  flex: 0 0 22px;
+  min-width: 0;
+  min-height: 22px;
+  padding: 1px 5px;
+  border: 0;
+  border-radius: 3px;
+  background: #e8eeea;
+  color: #315448;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+@media (max-width: 520px) {
+  .day-cell {
+    gap: 2px;
+    padding: 4px 3px;
+  }
+
+  .day-date-button {
+    min-height: 32px;
+  }
+
+  .event-chip {
+    flex-basis: 24px;
+    height: 24px;
+    gap: 4px;
+    padding-inline: 4px;
+  }
+
+  .event-time,
+  .event-title {
+    font-size: 10px;
+  }
+
+  .more-events {
+    flex-basis: 22px;
+    min-height: 22px;
+    font-size: 11px;
+  }
+}
+
+.days-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.week-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 0;
+  min-height: 0;
+}
+
+.week-row:not(:last-child) {
+  border-bottom: 1px solid rgba(25, 58, 54, 0.14);
+}
+
+.week-row .day-cell {
+  height: 100%;
+  gap: 2px;
+  padding: 6px 8px 5px;
+  border-bottom: 0;
+}
+
+.week-event-layer {
+  position: absolute;
+  z-index: 2;
+  inset: 54px 0 26px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 26px;
+  gap: 2px 0;
+  align-content: start;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.day-events {
+  padding-top: calc(var(--occupied-lane-count, 0) * 26px + 8px);
+}
+
+.multi-day-bar {
+  display: flex;
+  min-width: 0;
+  height: 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 2px 7px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--event-color) 48%, white);
+  border-left: 3px solid var(--event-color);
+  border-right: 3px solid var(--event-color);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--event-color) 15%, white);
+  color: #193a36;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.multi-day-bar.segment-start {
+  border-left-width: 4px;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  padding-left: 8px;
+}
+
+.multi-day-bar.segment-end {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+.multi-day-bar:not(.segment-start) {
+  border-left: 0;
+  padding-left: 4px;
+}
+
+.multi-day-bar:not(.segment-end) {
+  border-right: 0;
+  padding-right: 4px;
+}
+
+.multi-day-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.continuation-icon {
+  flex: 0 0 auto;
+  color: var(--event-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.multi-day-bar:focus-visible,
+.event-chip:focus-visible,
+.more-events:focus-visible {
+  position: relative;
+  z-index: 3;
+  outline: 2px solid #d96f4f;
+  outline-offset: -2px;
+}
+
+@media (max-width: 520px) {
+  .week-row .day-cell {
+    gap: 3px;
+    padding: 4px 3px;
+  }
+
+  .week-event-layer {
+    inset: 44px 0 26px;
+  }
+
+  .multi-day-bar {
+    height: 20px;
+    padding-inline: 4px;
+  }
+
+  .multi-day-title {
+    font-size: 10px;
+  }
+}
+
+.week-row .day-cell {
+  position: relative;
+}
+
+.week-row .day-events {
+  overflow: visible;
+}
+
+.week-row .more-events {
+  position: absolute;
+  z-index: 4;
+  right: 4px;
+  bottom: 4px;
+  left: 4px;
+}
+
+@media (max-width: 390px) {
+  .calendar-toolbar {
+    grid-template-columns: 40px minmax(0, 1fr) 40px 56px 40px;
+    gap: 3px;
+    min-height: 58px;
+  }
+
+  .month-title {
+    font-size: 15px;
+  }
+
+  :host ::ng-deep .month-arrow.p-button,
+  :host ::ng-deep .categories-button.p-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  :host ::ng-deep .today-button.p-button {
+    min-width: 56px;
+    min-height: 40px;
+  }
+}

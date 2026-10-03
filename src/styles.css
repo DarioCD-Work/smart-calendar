@@ -1,1 +1,52 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&display=swap');
+
+:root {
+	color-scheme: light;
+	font-family: 'DM Sans', sans-serif;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	color: #193a36;
+	background-color: #edf3ef;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+	margin: 0;
+	overflow: hidden;
+}
+
+body {
+	background-color: #edf3ef;
+	background-image:
+		linear-gradient(rgba(25, 58, 54, 0.035) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(25, 58, 54, 0.035) 1px, transparent 1px);
+	background-size: 28px 28px;
+}
+
+button {
+	font: inherit;
+}
+
+.p-colorpicker-panel:not(.p-colorpicker-panel-inline) {
+	width: min(260px, calc(100vw - 32px));
+	height: 184px;
+	box-sizing: border-box;
+	z-index: 1300 !important;
+}
+
+.p-colorpicker-panel:not(.p-colorpicker-panel-inline) .p-colorpicker-color-selector {
+	left: max(8px, calc((100% - 184px) / 2));
+}
+
+.p-colorpicker-panel:not(.p-colorpicker-panel-inline) .p-colorpicker-hue {
+	left: max(167px, calc((100% - 184px) / 2 + 167px));
+}

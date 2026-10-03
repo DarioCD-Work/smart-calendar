@@ -1,0 +1,65 @@
+:host ::ng-deep .day-events-dialog .p-dialog-content {
+  padding: 4px 18px 18px;
+}
+
+.day-event-list {
+  display: grid;
+  gap: 7px;
+  max-height: min(60dvh, 560px);
+  overflow-y: auto;
+}
+
+.day-event-row {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, auto) minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 8px 10px;
+  border: 1px solid #dce4df;
+  border-radius: 5px;
+  background: #fff;
+  color: #193a36;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.event-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.event-row-time {
+  color: #65756e;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-row-title {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-events {
+  margin: 0;
+  padding: 12px 0;
+  color: #667670;
+}
+
+@media (max-width: 520px) {
+  :host ::ng-deep .day-events-dialog .p-dialog-content {
+    padding-inline: 12px;
+  }
+
+  .day-event-row {
+    grid-template-columns: 14px minmax(70px, auto) minmax(0, 1fr) 18px;
+    gap: 7px;
+    min-height: 54px;
+    padding-inline: 7px;
+  }
+}

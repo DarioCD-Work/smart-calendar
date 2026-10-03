@@ -1,0 +1,124 @@
+<p-dialog
+  [header]="dialogTitle"
+  [visible]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(660px, calc(100vw - 24px))' }"
+  styleClass="event-editor-dialog"
+  (visibleChange)="onVisibleChange($event)"
+>
+  <form class="event-form" #eventForm="ngForm" (ngSubmit)="submit()">
+    @if (event?.recurrence) {
+      <p class="series-notice">Estás editando toda la serie recurrente.</p>
+    }
+
+    <label class="field">
+      <span>Título</span>
+      <input pInputText name="title" [(ngModel)]="title" maxlength="100" required autocomplete="off" />
+    </label>
+
+    <div class="field-grid">
+      <label class="field">
+        <span>Fecha de inicio</span>
+        <input pInputText type="date" name="startDate" [(ngModel)]="startDate" (ngModelChange)="onStartDateChange()" required />
+      </label>
+      <label class="field">
+        <span>Fecha de finalización</span>
+        <input pInputText type="date" name="eventEndDate" [(ngModel)]="eventEndDate" [min]="startDate" required />
+      </label>
+    </div>
+
+    <label class="field category-field">
+        <span>Categoría</span>
+        <span class="category-select-wrap">
+          <span class="category-swatch" [style.backgroundColor]="selectedCategory?.color ?? '#89938e'"></span>
+          <select name="categoryId" [(ngModel)]="categoryId">
+            <option value="">Sin categoría</option>
+            @for (category of categories; track category.id) {
+              <option [value]="category.id">{{ category.name }}</option>
+            }
+          </select>
+        </span>
+    </label>
+
+    <label class="all-day-toggle">
+      <input type="checkbox" name="allDay" [(ngModel)]="allDay" />
+      <span>Todo el día</span>
+    </label>
+
+    @if (!allDay) {
+      <div class="field-grid time-grid">
+        <label class="field">
+          <span>Hora de inicio</span>
+          <input pInputText type="time" name="startTime" [(ngModel)]="startTime" />
+        </label>
+        <label class="field">
+          <span>Hora de finalización</span>
+          <input pInputText type="time" name="endTime" [(ngModel)]="endTime" />
+        </label>
+      </div>
+    }
+
+    <label class="field">
+      <span>Repetir</span>
+      <select
+        name="recurrenceSelection"
+        [(ngModel)]="recurrenceSelection"
+        (ngModelChange)="onRecurrenceChange($event)"
+      >
+        <option value="none">No se repite</option>
+        <option value="daily">Todos los días</option>
+        <option value="weekly">Todas las semanas</option>
+        <option value="custom">Personalizado</option>
+        <option value="yearly">Todos los años</option>
+      </select>
+    </label>
+
+    @if (recurrenceSelection === 'weekly' || recurrenceSelection === 'custom') {
+      <fieldset class="weekday-picker">
+        <legend>Se repite estos días</legend>
+        <div class="weekday-options">
+          @for (weekday of weekdays; track weekday.value) {
+            <label class="weekday-option" [attr.aria-label]="weekday.label">
+              <input
+                type="checkbox"
+                [checked]="isWeekdaySelected(weekday.value)"
+                (change)="toggleWeekday(weekday.value, $event)"
+              />
+              <span>{{ weekday.shortLabel }}</span>
+            </label>
+          }
+        </div>
+      </fieldset>
+    }
+
+    @if (recurrenceSelection === 'custom') {
+      <label class="field interval-field">
+        <span>Cada cuántas semanas</span>
+        <input pInputText type="number" name="interval" [(ngModel)]="interval" min="1" max="52" step="1" />
+      </label>
+    }
+
+    @if (recurrenceSelection !== 'none') {
+      <label class="field">
+        <span>Repetir hasta (opcional)</span>
+        <input pInputText type="date" name="recurrenceEndDate" [(ngModel)]="recurrenceEndDate" [min]="startDate" />
+      </label>
+    }
+
+    <label class="field">
+      <span>Notas (opcional)</span>
+      <textarea pTextarea name="notes" [(ngModel)]="notes" rows="3" maxlength="1000"></textarea>
+    </label>
+
+    @if (validationError || storageError) {
+      <p class="form-error" role="alert">{{ validationError ?? storageError }}</p>
+    }
+
+    <div class="form-actions">
+      <p-button label="Cancelar" severity="secondary" [text]="true" type="button" (onClick)="closed.emit()" />
+      <p-button [label]="event ? 'Guardar cambios' : 'Crear evento'" icon="pi pi-check" type="submit" />
+    </div>
+  </form>
+</p-dialog>
