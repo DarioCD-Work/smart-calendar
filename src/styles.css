@@ -50,3 +50,63 @@ button {
 .p-colorpicker-panel:not(.p-colorpicker-panel-inline) .p-colorpicker-hue {
 	left: max(167px, calc((100% - 184px) / 2 + 167px));
 }
+
+.calendar-sources-button.p-button {
+	min-width: 128px;
+	min-height: 48px;
+	border-color: rgba(25, 58, 54, 0.3);
+	border-radius: 6px;
+	color: #193a36;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.google-calendar-error {
+	flex: 0 0 auto;
+	margin: 0 0 8px;
+	padding: 8px 11px;
+	border-left: 3px solid #547da4;
+	background: #eef4f9;
+	color: #334f68;
+	font-size: 13px;
+}
+
+.google-event-mark {
+	display: inline-grid;
+	width: 13px;
+	height: 13px;
+	flex: 0 0 13px;
+	place-items: center;
+	border: 1px solid color-mix(in srgb, var(--event-color, #4285f4) 45%, white);
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.78);
+	color: var(--event-color, #4285f4);
+	font-size: 8px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.multi-day-bar .google-event-mark {
+	margin-left: auto;
+}
+
+@media (max-width: 520px) {
+	.calendar-sources-button.p-button {
+		width: 44px;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0;
+	}
+
+	.calendar-sources-button .p-button-label {
+		display: none;
+	}
+}
+
+@media (max-width: 390px) {
+	.calendar-sources-button.p-button {
+		width: 40px;
+		min-width: 40px;
+		height: 40px;
+	}
+}

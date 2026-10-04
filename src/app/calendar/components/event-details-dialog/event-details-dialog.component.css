@@ -29,6 +29,50 @@
   font-size: 15px;
 }
 
+.google-event-origin {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border-left: 3px solid #8ba0b2;
+  background: #f1f5f8;
+  color: #40586b;
+  font-size: 13px;
+}
+
+.google-event-origin strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #344e63;
+}
+
+.google-origin-mark {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  border: 1px solid #8ba0b2;
+  border-radius: 50%;
+  font-size: 9px;
+}
+
+.event-location {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.google-event-link {
+  display: inline-flex;
+  width: max-content;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  color: #315f86;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .category-dot {
   width: 13px;
   height: 13px;

@@ -1,12 +1,16 @@
 import { Injectable } from '@angular/core';
 import { CalendarEvent, CalendarEventDraft } from '../models/calendar-event.model';
 import { EventCategory } from '../models/event-category.model';
+import { CalendarSourcePreference, GoogleCalendarConfig } from '../models/external-calendar.model';
+import { GoogleCalendarAccountConfig } from '../models/google-account.model';
 import { compareCalendarDates } from './calendar-date.service';
 
 const databaseName = 'smart-calendar';
-const databaseVersion = 2;
+const databaseVersion = 4;
 const eventStoreName = 'events';
 const categoryStoreName = 'categories';
+const calendarSourceStoreName = 'calendarSources';
+const googleAccountStoreName = 'googleAccounts';
 
 const defaultCategories: EventCategory[] = [
   { id: 'personal', name: 'Personal', color: '#397b5a' },
@@ -16,6 +20,52 @@ const defaultCategories: EventCategory[] = [
   { id: 'appointments', name: 'Citas', color: '#6d7851' },
   { id: 'other', name: 'Otros', color: '#687975' }
 ];
+
+export function migrateLegacyCalendarEvents(transaction: IDBTransaction): void {
+  const cursorRequest = transaction.objectStore(eventStoreName).openCursor();
+
+  cursorRequest.onsuccess = () => {
+    const cursor = cursorRequest.result;
+
+    if (!cursor) {
+      return;
+    }
+
+    const storedEvent = cursor.value as Partial<CalendarEvent> & { id: string; date?: string };
+
+    if (storedEvent.date) {
+      const { date, ...eventWithoutLegacyDate } = storedEvent;
+      cursor.update({
+        ...eventWithoutLegacyDate,
+        startDate: storedEvent.startDate ?? date,
+        endDate: storedEvent.endDate ?? date
+      });
+    }
+
+    cursor.continue();
+  };
+}
+
+export function migrateGoogleAccountsFromCalendarSources(transaction: IDBTransaction): void {
+  const cursorRequest = transaction.objectStore(calendarSourceStoreName).openCursor();
+
+  cursorRequest.onsuccess = () => {
+    const cursor = cursorRequest.result;
+    if (!cursor) {
+      return;
+    }
+
+    const preference = cursor.value as CalendarSourcePreference;
+    if (preference.provider === 'google') {
+      transaction.objectStore(googleAccountStoreName).put({
+        accountId: preference.accountId,
+        email: preference.accountEmail
+      } satisfies GoogleCalendarAccountConfig);
+    }
+
+    cursor.continue();
+  };
+}
 
 @Injectable({ providedIn: 'root' })
 export class CalendarStorageService {
@@ -74,6 +124,104 @@ export class CalendarStorageService {
 
   async deleteCategory(id: string): Promise<void> {
     await this.performRequest(categoryStoreName, 'readwrite', (store) => store.delete(id));
+  }
+
+  async getCalendarSourcePreferences(): Promise<CalendarSourcePreference[]> {
+    return this.getAll<CalendarSourcePreference>(calendarSourceStoreName);
+  }
+
+  async saveCalendarSourcePreference(preference: CalendarSourcePreference): Promise<CalendarSourcePreference> {
+    await this.performRequest(calendarSourceStoreName, 'readwrite', (store) => store.put(preference));
+    return preference;
+  }
+
+  async deleteCalendarSourcePreference(id: string): Promise<void> {
+    await this.performRequest(calendarSourceStoreName, 'readwrite', (store) => store.delete(id));
+  }
+
+  async getGoogleAccountConfigs(): Promise<GoogleCalendarAccountConfig[]> {
+    return this.getAll<GoogleCalendarAccountConfig>(googleAccountStoreName);
+  }
+
+  async saveGoogleAccountConfig(account: GoogleCalendarAccountConfig): Promise<GoogleCalendarAccountConfig> {
+    await this.performRequest(googleAccountStoreName, 'readwrite', (store) => store.put(account));
+    return account;
+  }
+
+  async deleteGoogleAccountConfig(accountId: string): Promise<void> {
+    await this.performRequest(googleAccountStoreName, 'readwrite', (store) => store.delete(accountId));
+  }
+
+  async saveGoogleCalendarsForAccount(
+    accountId: string,
+    accountEmail: string,
+    calendars: Omit<GoogleCalendarConfig, 'id' | 'provider' | 'accountId' | 'accountEmail'>[]
+  ): Promise<GoogleCalendarConfig[]> {
+    const existing = await this.getCalendarSourcePreferences();
+    const existingGoogleCalendars = existing.filter((item): item is GoogleCalendarConfig =>
+      item.provider === 'google' && item.accountId === accountId
+    );
+    const existingByCalendarId = new Map(existingGoogleCalendars.map((calendar) => [calendar.calendarId, calendar]));
+    const nextCalendars = calendars.map((calendar) => {
+      const previous = existingByCalendarId.get(calendar.calendarId);
+
+      return {
+        ...calendar,
+        id: this.googleCalendarPreferenceId(accountId, calendar.calendarId),
+        provider: 'google' as const,
+        accountId,
+        accountEmail,
+        visible: previous?.visible ?? calendar.visible ?? true
+      };
+    });
+    const nextIds = new Set(nextCalendars.map((calendar) => calendar.id));
+
+    await new Promise<void>(async (resolve, reject) => {
+      try {
+        const database = await this.openDatabase();
+        const transaction = database.transaction(calendarSourceStoreName, 'readwrite');
+        const store = transaction.objectStore(calendarSourceStoreName);
+
+        for (const calendar of existingGoogleCalendars) {
+          if (!nextIds.has(calendar.id)) {
+            store.delete(calendar.id);
+          }
+        }
+
+        for (const calendar of nextCalendars) {
+          store.put(calendar);
+        }
+
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(transaction.error ?? new Error('No se pudieron guardar los calendarios Google.'));
+        transaction.onerror = () => reject(transaction.error ?? new Error('Falló el guardado de los calendarios Google.'));
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    return nextCalendars;
+  }
+
+  async deleteGoogleCalendarsForAccount(accountId: string): Promise<void> {
+    const preferences = await this.getCalendarSourcePreferences();
+    const ids = preferences
+      .filter((preference) => preference.provider === 'google' && preference.accountId === accountId)
+      .map((preference) => preference.id);
+
+    await new Promise<void>(async (resolve, reject) => {
+      try {
+        const database = await this.openDatabase();
+        const transaction = database.transaction(calendarSourceStoreName, 'readwrite');
+        const store = transaction.objectStore(calendarSourceStoreName);
+        ids.forEach((id) => store.delete(id));
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(transaction.error ?? new Error('No se pudo desconectar la cuenta Google.'));
+        transaction.onerror = () => reject(transaction.error ?? new Error('Falló la desconexión de la cuenta Google.'));
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   private getAll<T>(storeName: string): Promise<T[]> {
@@ -141,29 +289,20 @@ export class CalendarStorageService {
           }
         }
 
+        if (!database.objectStoreNames.contains(calendarSourceStoreName)) {
+          database.createObjectStore(calendarSourceStoreName, { keyPath: 'id' });
+        }
+
+        if (!database.objectStoreNames.contains(googleAccountStoreName)) {
+          database.createObjectStore(googleAccountStoreName, { keyPath: 'accountId' });
+        }
+
         if (event.oldVersion < 2 && database.objectStoreNames.contains(eventStoreName)) {
-          const cursorRequest = request.transaction!.objectStore(eventStoreName).openCursor();
+          migrateLegacyCalendarEvents(request.transaction!);
+        }
 
-          cursorRequest.onsuccess = () => {
-            const cursor = cursorRequest.result;
-
-            if (!cursor) {
-              return;
-            }
-
-            const storedEvent = cursor.value as Partial<CalendarEvent> & { id: string; date?: string };
-
-            if (storedEvent.date) {
-              const { date, ...eventWithoutLegacyDate } = storedEvent;
-              cursor.update({
-                ...eventWithoutLegacyDate,
-                startDate: storedEvent.startDate ?? date,
-                endDate: storedEvent.endDate ?? date
-              });
-            }
-
-            cursor.continue();
-          };
+        if (event.oldVersion < 4 && database.objectStoreNames.contains(calendarSourceStoreName)) {
+          migrateGoogleAccountsFromCalendarSources(request.transaction!);
         }
       };
 
@@ -184,6 +323,10 @@ export class CalendarStorageService {
     }
 
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  private googleCalendarPreferenceId(accountId: string, calendarId: string): string {
+    return `google:${encodeURIComponent(accountId)}:${encodeURIComponent(calendarId)}`;
   }
 
   private validateDateRange(startDate: string, endDate: string, recurrenceEndDate?: string): void {

@@ -9,9 +9,12 @@
   (visibleChange)="onVisibleChange($event)"
 >
   <div class="day-event-list">
-    @for (occurrence of events; track occurrence.eventId + occurrence.startDate) {
+    @for (occurrence of events; track occurrence.eventId + occurrence.occurrenceKey) {
       <button class="day-event-row" type="button" (click)="eventSelected.emit(occurrence)">
         <span class="event-color" [style.backgroundColor]="categoryColor(occurrence.event)"></span>
+          @if (occurrence.event.source === 'google') {
+            <span class="google-source-mark" aria-label="Google Calendar">G</span>
+          }
         <span class="event-row-time">
           @if (occurrence.event.allDay) {
             Todo el día

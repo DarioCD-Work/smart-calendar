@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { CalendarEventOccurrence } from '../../../models/calendar-event-occurrence.model';
+import { CalendarDisplayOccurrence } from '../../../models/calendar-display-event.model';
+import { CalendarEvent } from '../../../models/calendar-event.model';
 import { EventCategory } from '../../../models/event-category.model';
 import { RecurrenceRule } from '../../../models/calendar-event.model';
 import { parseCalendarDate } from '../../../services/calendar-date.service';
@@ -14,12 +15,12 @@ import { parseCalendarDate } from '../../../services/calendar-date.service';
 })
 export class EventDetailsDialogComponent implements OnChanges {
   @Input() visible = false;
-  @Input() occurrence: CalendarEventOccurrence | null = null;
+  @Input() occurrence: CalendarDisplayOccurrence | null = null;
   @Input() categories: EventCategory[] = [];
 
   @Output() readonly closed = new EventEmitter<void>();
-  @Output() readonly editRequested = new EventEmitter<CalendarEventOccurrence>();
-  @Output() readonly deleteRequested = new EventEmitter<CalendarEventOccurrence>();
+  @Output() readonly editRequested = new EventEmitter<CalendarEvent>();
+  @Output() readonly deleteRequested = new EventEmitter<CalendarDisplayOccurrence>();
 
   confirmingDelete = false;
 
@@ -37,6 +38,10 @@ export class EventDetailsDialogComponent implements OnChanges {
 
   get category(): EventCategory | undefined {
     return this.categories.find((item) => item.id === this.occurrence?.event.categoryId);
+  }
+
+  get localEvent(): CalendarEvent | null {
+    return this.occurrence?.event.source === 'local' ? this.occurrence.event.localEvent ?? null : null;
   }
 
   formatDate(date: string): string {
@@ -73,11 +78,13 @@ export class EventDetailsDialogComponent implements OnChanges {
   }
 
   requestDelete(): void {
-    if (this.confirmingDelete && this.occurrence) {
+    if (this.confirmingDelete && this.occurrence?.event.source === 'local') {
       this.deleteRequested.emit(this.occurrence);
       return;
     }
 
-    this.confirmingDelete = true;
+    if (this.occurrence?.event.source === 'local') {
+      this.confirmingDelete = true;
+    }
   }
 }

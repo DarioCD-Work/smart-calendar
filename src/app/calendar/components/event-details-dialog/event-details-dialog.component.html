@@ -29,15 +29,36 @@
         </p>
       }
 
-      @if (item.event.notes) {
-        <p class="event-notes">{{ item.event.notes }}</p>
+      @if (item.event.source === 'google') {
+        <section class="google-event-origin">
+          <strong><span class="google-origin-mark" aria-hidden="true">G</span> Google Calendar</strong>
+          <span>{{ item.event.calendarName }} · {{ item.event.accountEmail }}</span>
+            @if (item.event.isRecurring) {
+              <small>Ocurrencia de un evento recurrente de Google Calendar.</small>
+            }
+        </section>
       }
 
-      @if (item.event.recurrence; as recurrence) {
+      @if (item.event.description) {
+        <p class="event-notes">{{ item.event.description }}</p>
+      }
+
+      @if (item.event.location) {
+        <p class="event-location"><i class="pi pi-map-marker" aria-hidden="true"></i> {{ item.event.location }}</p>
+      }
+
+      @if (item.event.source === 'google' && item.event.htmlLink) {
+        <a class="google-event-link" [href]="item.event.htmlLink" target="_blank" rel="noopener noreferrer">
+          Abrir en Google Calendar
+          <i class="pi pi-external-link" aria-hidden="true"></i>
+        </a>
+      }
+
+      @if (localEvent?.recurrence; as recurrence) {
         <section class="series-details">
           <strong>Serie recurrente</strong>
           <span>{{ recurrenceLabel(recurrence) }}</span>
-          <span>Desde {{ formatDate(item.event.startDate) }}</span>
+          <span>Desde {{ formatDate(localEvent!.startDate) }}</span>
           @if (recurrence.endDate) {
             <span>Hasta {{ formatDate(recurrence.endDate) }}</span>
           }
@@ -45,10 +66,10 @@
         </section>
       }
 
-      @if (confirmingDelete) {
+      @if (confirmingDelete && localEvent) {
         <div class="delete-confirmation" role="alertdialog" aria-label="Confirmar eliminación">
           <p>
-            @if (item.event.recurrence) {
+            @if (localEvent.recurrence) {
               ¿Eliminar toda la serie de este evento?
             } @else {
               ¿Eliminar este evento?
@@ -62,16 +83,18 @@
       }
 
       <div class="details-actions">
-        <p-button
-          [label]="item.event.recurrence ? 'Editar serie' : 'Editar'"
-          icon="pi pi-pencil"
-          severity="secondary"
-          [outlined]="true"
-          (onClick)="editRequested.emit(item)"
-        />
-        @if (!confirmingDelete) {
+        @if (localEvent; as editableEvent) {
           <p-button
-            [label]="item.event.recurrence ? 'Eliminar serie' : 'Eliminar'"
+            [label]="editableEvent.recurrence ? 'Editar serie' : 'Editar'"
+            icon="pi pi-pencil"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="editRequested.emit(editableEvent)"
+          />
+        }
+        @if (localEvent && !confirmingDelete) {
+          <p-button
+            [label]="localEvent.recurrence ? 'Eliminar serie' : 'Eliminar'"
             icon="pi pi-trash"
             severity="danger"
             [text]="true"

@@ -57,3 +57,7 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Google Calendar
+
+La integración es de solo lectura y requiere un OAuth Client ID público. Consulta la [guía de configuración de Google Calendar](docs/google-calendar-setup.md) para configurar Google Cloud Console, los orígenes autorizados y la reconexión OAuth de la PWA.

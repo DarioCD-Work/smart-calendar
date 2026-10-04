@@ -1,9 +1,9 @@
-import { CalendarEventOccurrence } from './calendar-event-occurrence.model';
+import { CalendarDisplayOccurrence } from './calendar-display-event.model';
 
 export interface CalendarEventSegment {
   eventId: string;
   occurrenceStartDate: string;
-  occurrence: CalendarEventOccurrence;
+  occurrence: CalendarDisplayOccurrence;
   weekIndex: number;
   startColumn: number;
   endColumn: number;
