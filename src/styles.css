@@ -148,6 +148,27 @@ app-calendar .range-grid .week-event-layer {
 	row-gap: 0;
 }
 
+app-calendar .timeline-view .week-row > .day-cell:not(:last-child) {
+	border-right: 1px solid rgba(25, 58, 54, 0.14);
+}
+
+app-calendar .timeline-view .week-row > .day-cell:last-child {
+	border-right: 0;
+}
+
+app-calendar .timeline-view .day-number {
+	font-size: 21px;
+}
+
+app-calendar .timeline-view .range-day-label {
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+app-calendar .timeline-view .weekday {
+	font-size: 14px;
+}
+
 app-calendar .calendar-heading {
 	display: flex;
 	align-items: center;

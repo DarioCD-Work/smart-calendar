@@ -63,6 +63,7 @@
       (eventSelected)="showOccurrenceDetails($event)" />
   } @else {
   <section class="month-view" [class.range-grid]="viewMode() !== 'month'"
+    [class.timeline-view]="isTimelineView()"
     [attr.aria-label]="viewMode() === 'month' ? 'Vista mensual' : viewMode() === 'week' ? 'Vista semanal' : 'Vista de 15 días'">
     @if (viewMode() === 'month' || viewMode() === 'week') {
     <div class="weekday-row" role="row">
@@ -110,6 +111,14 @@
                 }
               </button>
 
+              @if (isTimelineView()) {
+                <app-day-timeline [date]="dayView.day.dateKey"
+                  [occurrences]="occurrencesByDate().get(dayView.day.dateKey) ?? []"
+                  [compact]="viewMode() === '15-days'"
+                  (eventSelected)="showOccurrenceDetails($event)"
+                  (createRequested)="openCreateEvent(dayView.day, $event)"
+                  (dayEventsRequested)="moreEventsDate.set(dayView.day.dateKey)" />
+              } @else {
               <div class="day-events">
                 @for (occurrence of dayView.singleDayOccurrences; track occurrence.eventId + occurrence.startDate) {
                   <button
@@ -136,9 +145,11 @@
                   </button>
                 }
               </div>
+              }
             </div>
           }
 
+          @if (!isTimelineView()) {
           <div class="week-event-layer" aria-label="Eventos de varios días"
             [style.grid-template-columns]="'repeat(' + week.days.length + ', minmax(0, 1fr))'">
             @for (segment of week.segments; track segment.eventId + segment.occurrenceStartDate) {
@@ -167,6 +178,7 @@
               </button>
             }
           </div>
+          }
         </div>
       }
     </div>
@@ -177,6 +189,7 @@
     [visible]="editorVisible()"
     [event]="eventBeingEdited()"
     [initialDate]="editorDate() ?? ''"
+    [initialTime]="editorTime()"
     [categories]="categories()"
     [storageError]="editorError()"
     (saved)="saveEvent($event)"

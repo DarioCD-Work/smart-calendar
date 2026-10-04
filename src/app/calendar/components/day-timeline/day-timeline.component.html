@@ -1,0 +1,60 @@
+<div class="timeline-frame" [class.compact]="compact()">
+  <div class="timeline-canvas" #canvas [class.has-all-day]="layout().allDay.length > 0"
+    (pointerup)="capturePointer($event)" (click)="create($event)">
+    <div class="hour-guides" aria-hidden="true">
+      @for (hour of hours(); track hour) {
+        <span class="hour-guide" [class.first-hour]="hour === 0" [class.last-hour]="hour === 24" [style.top.%]="hour / 24 * 100">
+          <span>{{ hour.toString().padStart(2, '0') }}h</span>
+        </span>
+      }
+    </div>
+    <div class="hour-gutter" aria-hidden="true"></div>
+    @if (layout().allDay.length) {
+      <div class="all-day-lanes" [style.grid-template-columns]="'repeat(' + layout().allDay.length + ', minmax(0, 1fr))'">
+        @for (occurrence of layout().allDay; track occurrence.eventId) {
+          <button type="button" class="all-day-event" [class.horizontal-label]="allDayLabelHorizontal()"
+            [style.--timeline-color]="eventColor(occurrence)"
+            [attr.aria-label]="occurrence.event.title + ', todo el día, ' + occurrence.startDate + ' a ' + occurrence.endDate"
+            [title]="occurrence.event.title + ' · Todo el día · ' + occurrence.startDate + ' / ' + occurrence.endDate"
+            (click)="select($event, occurrence)">
+            <span class="all-day-caption">Todo el día</span>
+            <strong>{{ occurrence.event.title }}</strong>
+          </button>
+        }
+      </div>
+    }
+    <div class="timed-plane">
+      @for (block of blocks(); track block.occurrence.eventId) {
+        <button type="button" class="timed-event" [class.short-event]="block.short" [class.narrow-event]="block.narrow"
+          [class.dense-event]="block.dense" [style.min-height.px]="block.minimumHeight"
+          [style.top.%]="block.topPercent" [style.height.%]="block.heightPercent"
+          [style.left.%]="block.leftPercent" [style.width]="'calc(' + block.widthPercent + '% - 2px)'"
+          [style.--timeline-color]="eventColor(block.occurrence)"
+          [attr.aria-label]="block.occurrence.event.title + ', ' + timeLabel(block.startMinutes) + ' a ' + timeLabel(block.endMinutes)"
+          [title]="block.occurrence.event.title + ' · ' + timeLabel(block.startMinutes) + '–' + timeLabel(block.endMinutes)"
+          (click)="select($event, block.occurrence)">
+          @if (block.showTime && !block.dense) {
+            <span class="timeline-event-time">{{ timeLabel(block.startMinutes) }}@if (block.showRange) { – {{ timeLabel(block.endMinutes) }} }</span>
+          }
+          <strong class="timeline-event-title">{{ block.occurrence.event.title }}</strong>
+          @if (block.continuesBefore || block.continuesAfter) {
+            <span class="continuation-mark" aria-hidden="true">{{ block.continuesBefore ? '↑' : '' }}{{ block.continuesAfter ? '↓' : '' }}</span>
+          }
+        </button>
+      }
+    </div>
+    @if (nowPercent() !== null) {
+      <div class="current-time" [style.top.%]="nowPercent()" [attr.aria-label]="'Hora actual: ' + nowLabel()">
+        <span>{{ nowLabel() }}</span>
+      </div>
+    }
+  </div>
+  <div class="timeline-footer">
+    @if (needsEventList()) {
+      <button type="button" class="untimed-button" (click)="showDayEvents($event)" aria-label="Ver eventos del día">
+        @if (layout().untimed.length) { Sin horario · {{ layout().untimed.length }} }
+        @else { {{ occurrences().length }} eventos }
+      </button>
+    }
+  </div>
+</div>
