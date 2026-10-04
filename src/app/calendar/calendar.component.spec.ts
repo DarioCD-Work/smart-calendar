@@ -1,5 +1,11 @@
 import { CalendarComponent } from './calendar.component';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { CalendarEvent } from '../models/calendar-event.model';
+import { formatCalendarDate } from '../services/calendar-date.service';
+import { CalendarEventService } from '../services/calendar-event.service';
+import { CalendarSourceService } from '../services/calendar-source.service';
+import { GoogleCalendarService } from '../services/google-calendar.service';
 
 describe('CalendarComponent', () => {
   beforeEach(() => {
@@ -46,5 +52,46 @@ describe('CalendarComponent', () => {
     calendar.navigateMonth(1);
     calendar.goToToday();
     expect(calendar.days().find((day) => day.isToday)?.isSelected).toBeTrue();
+  });
+
+  it('keeps local events in the unified display when Google reports an offline failure', () => {
+    const date = formatCalendarDate(new Date());
+    const localEvent: CalendarEvent = {
+      id: 'local-only',
+      title: 'Evento local',
+      startDate: date,
+      endDate: date,
+      allDay: true,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z'
+    };
+    const eventService = {
+      events: signal([localEvent]),
+      categories: signal([])
+    };
+    const googleService = {
+      occurrences: signal([]),
+      error: signal('No se pudieron actualizar los calendarios de Google.'),
+      loading: signal(false),
+      isConfigured: signal(false),
+      connectedAccountIds: signal<string[]>([])
+    };
+    const sourceService = {
+      isLocalCalendarVisible: () => true,
+      getLocalCalendarViews: () => [],
+      getGoogleAccountViews: () => []
+    };
+
+    TestBed.overrideProvider(CalendarEventService, { useValue: eventService });
+    TestBed.overrideProvider(CalendarSourceService, { useValue: sourceService });
+    TestBed.overrideProvider(GoogleCalendarService, { useValue: googleService });
+
+    const calendar = createCalendar();
+
+    expect(calendar.localEventOccurrences().map((occurrence) => occurrence.event.title))
+      .toEqual(['Evento local']);
+    expect(calendar.eventOccurrences().map((occurrence) => occurrence.event.title))
+      .toEqual(['Evento local']);
+    expect(calendar.googleCalendarError()).toContain('No se pudieron actualizar');
   });
 });

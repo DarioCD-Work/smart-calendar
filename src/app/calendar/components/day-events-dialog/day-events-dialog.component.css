@@ -11,7 +11,7 @@
 
 .day-event-row {
   display: grid;
-  grid-template-columns: 14px minmax(80px, auto) minmax(0, 1fr) 18px;
+  grid-template-columns: 14px 15px minmax(80px, auto) minmax(0, 1fr) 18px;
   align-items: center;
   gap: 10px;
   min-height: 50px;
@@ -29,6 +29,19 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
+}
+
+.google-source-mark {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  place-items: center;
+  border: 1px solid #9eabb2;
+  border-radius: 50%;
+  color: #526779;
+  font-size: 8px;
+  font-weight: 700;
 }
 
 .event-row-time {
@@ -57,7 +70,7 @@
   }
 
   .day-event-row {
-    grid-template-columns: 14px minmax(70px, auto) minmax(0, 1fr) 18px;
+    grid-template-columns: 14px 15px minmax(70px, auto) minmax(0, 1fr) 18px;
     gap: 7px;
     min-height: 54px;
     padding-inline: 7px;

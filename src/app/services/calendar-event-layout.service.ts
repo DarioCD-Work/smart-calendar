@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { CalendarEventOccurrence } from '../models/calendar-event-occurrence.model';
+import { CalendarDisplayOccurrence } from '../models/calendar-display-event.model';
 import { CalendarEventSegment } from '../models/calendar-event-segment.model';
 import { addCalendarDays, calendarDateOrdinal, compareCalendarDates } from './calendar-date.service';
 
@@ -8,7 +8,7 @@ interface PendingSegment extends Omit<CalendarEventSegment, 'lane'> {}
 @Injectable({ providedIn: 'root' })
 export class CalendarEventLayoutService {
   getMultiDaySegments(
-    occurrences: readonly CalendarEventOccurrence[],
+    occurrences: readonly CalendarDisplayOccurrence[],
     rangeStart: string,
     rangeEnd: string
   ): CalendarEventSegment[] {
@@ -57,7 +57,7 @@ export class CalendarEventLayoutService {
   }
 
   private splitOccurrence(
-    occurrence: CalendarEventOccurrence,
+    occurrence: CalendarDisplayOccurrence,
     rangeStart: string,
     rangeEnd: string
   ): PendingSegment[] {

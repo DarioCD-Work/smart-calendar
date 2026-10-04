@@ -1,19 +1,18 @@
-import { CalendarEventOccurrence } from '../models/calendar-event-occurrence.model';
-import { CalendarEvent } from '../models/calendar-event.model';
+import { CalendarDisplayEvent, CalendarDisplayOccurrence } from '../models/calendar-display-event.model';
 import { CalendarEventLayoutService } from './calendar-event-layout.service';
 
-function occurrence(id: string, startDate: string, endDate: string): CalendarEventOccurrence {
-  const event: CalendarEvent = {
+function occurrence(id: string, startDate: string, endDate: string): CalendarDisplayOccurrence {
+  const event: CalendarDisplayEvent = {
     id,
+    source: 'google',
     title: id,
     startDate,
     endDate,
     allDay: true,
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z'
+    color: '#4285F4',
   };
 
-  return { eventId: id, event, startDate, endDate };
+  return { eventId: id, occurrenceKey: `${id}:${startDate}`, event, startDate, endDate };
 }
 
 describe('CalendarEventLayoutService', () => {
@@ -33,6 +32,8 @@ describe('CalendarEventLayoutService', () => {
       { weekIndex: 2, startColumn: 0, endColumn: 1, isStart: false, isEnd: true }
     ]);
     expect(segments.every((segment) => segment.occurrence === segments[0].occurrence)).toBeTrue();
+    expect(segments.map((segment) => segment.occurrence.event.color)).toEqual(['#4285F4', '#4285F4']);
+    expect(segments.every((segment) => segment.occurrence.event.color === '#4285F4')).toBeTrue();
   });
 
   it('clips segments to the visible range and marks continuation ends correctly', () => {

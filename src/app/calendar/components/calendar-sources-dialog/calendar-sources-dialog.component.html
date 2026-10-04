@@ -1,0 +1,111 @@
+<p-dialog
+  header="Calendarios"
+  [visible]="visible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(620px, calc(100vw - 32px))' }"
+  styleClass="calendar-sources-dialog"
+  (visibleChange)="onVisibleChange($event)"
+>
+  <div class="calendar-sources-content">
+    <section class="source-section" aria-labelledby="local-calendars-heading">
+      <h2 id="local-calendars-heading">Calendarios locales</h2>
+      <div class="source-list">
+        @for (calendar of localCalendars; track calendar.category.id) {
+          <label class="source-row">
+            <span class="source-color" [style.backgroundColor]="calendar.category.color" aria-hidden="true"></span>
+            <span class="source-name">{{ calendar.category.name }}</span>
+            <input
+              type="checkbox"
+              [checked]="calendar.visible"
+              [attr.aria-label]="'Mostrar calendario local ' + calendar.category.name"
+              (change)="setLocalVisibility(calendar.category.id, $event)"
+            />
+          </label>
+        }
+      </div>
+    </section>
+
+    <section class="source-section google-section" aria-labelledby="google-calendars-heading">
+      <h2 id="google-calendars-heading">Google</h2>
+
+      @if (googleAccounts.length === 0) {
+        <p class="empty-google">No hay cuentas de Google conectadas.</p>
+      }
+
+      @for (account of googleAccounts; track account.accountId) {
+        <div class="google-account">
+          <div class="google-account-heading">
+            <div class="account-identity">
+              <strong>{{ account.email }}</strong>
+              <span [class.account-connected]="account.connected">
+                {{ account.connected ? 'Conectada' : 'Vuelve a conectar' }}
+              </span>
+            </div>
+            <div class="account-actions">
+              <p-button
+                label="Reconectar"
+                icon="pi pi-refresh"
+                severity="secondary"
+                [text]="true"
+                (onClick)="reconnectGoogle.emit(account.accountId)"
+              />
+              <p-button
+                icon="pi pi-times"
+                severity="danger"
+                [text]="true"
+                [ariaLabel]="'Desconectar ' + account.email"
+                (onClick)="disconnectGoogle.emit(account.accountId)"
+              />
+            </div>
+          </div>
+
+          <div class="source-list google-calendar-list">
+            @for (calendar of account.calendars; track calendar.id) {
+              <label class="source-row">
+                <span class="source-color" [style.backgroundColor]="calendar.calendarColor ?? '#4285F4'" aria-hidden="true"></span>
+                <span class="source-name">
+                  {{ calendar.name }}
+                  @if (calendar.primary) { <small>Principal</small> }
+                </span>
+                <input
+                  type="checkbox"
+                  [checked]="calendar.visible"
+                  [attr.aria-label]="'Mostrar calendario ' + calendar.name + ' de ' + account.email"
+                  (change)="setGoogleVisibility(calendar.id, $event)"
+                />
+              </label>
+            }
+          </div>
+        </div>
+      }
+
+      @if (!googleConfigured) {
+        <p class="google-setup-note">Configura el Client ID de Google para conectar cuentas.</p>
+      }
+
+      <p-button
+        label="Añadir cuenta de Google"
+        icon="pi pi-plus"
+        severity="secondary"
+        [outlined]="true"
+        [disabled]="!googleConfigured || loading"
+        styleClass="add-google-account"
+        (onClick)="connectGoogle.emit()"
+      />
+    </section>
+
+    @if (loading) {
+      <p class="google-loading" role="status">Actualizando calendarios de Google…</p>
+    }
+
+    @if (error) {
+      <p class="google-error" role="alert">{{ error }}</p>
+    }
+
+    <div class="dialog-actions">
+      <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="closed.emit()" />
+    </div>
+  </div>
+</p-dialog>
