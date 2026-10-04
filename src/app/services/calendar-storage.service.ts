@@ -3,14 +3,21 @@ import { CalendarEvent, CalendarEventDraft } from '../models/calendar-event.mode
 import { EventCategory } from '../models/event-category.model';
 import { CalendarSourcePreference, GoogleCalendarConfig } from '../models/external-calendar.model';
 import { GoogleCalendarAccountConfig } from '../models/google-account.model';
+import { GoogleEventFilter } from '../models/google-event-filter.model';
+import { CalendarViewMode, isCalendarViewMode } from '../models/calendar-view-mode.model';
 import { compareCalendarDates } from './calendar-date.service';
+import { SmartCalendarBackupData } from '../models/smart-calendar-backup.model';
 
 const databaseName = 'smart-calendar';
-const databaseVersion = 4;
+const databaseVersion = 6;
 const eventStoreName = 'events';
 const categoryStoreName = 'categories';
 const calendarSourceStoreName = 'calendarSources';
 const googleAccountStoreName = 'googleAccounts';
+const googleEventFilterStoreName = 'googleEventFilters';
+const appPreferenceStoreName = 'appPreferences';
+const backupStoreNames = [eventStoreName, categoryStoreName, calendarSourceStoreName,
+  googleAccountStoreName, googleEventFilterStoreName, appPreferenceStoreName] as const;
 
 const defaultCategories: EventCategory[] = [
   { id: 'personal', name: 'Personal', color: '#397b5a' },
@@ -73,6 +80,64 @@ export class CalendarStorageService {
 
   async getEvents(): Promise<CalendarEvent[]> {
     return this.getAll<CalendarEvent>(eventStoreName);
+  }
+
+  async readBackupData(): Promise<SmartCalendarBackupData> {
+    const database = await this.openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([...backupStoreNames], 'readonly');
+      const records: Record<string, unknown[]> = {};
+      for (const name of backupStoreNames) {
+        const request = transaction.objectStore(name).getAll();
+        request.onsuccess = () => { records[name] = request.result; };
+      }
+      transaction.oncomplete = () => resolve(records as unknown as SmartCalendarBackupData);
+      transaction.onabort = () => reject(transaction.error ?? new Error('No se pudo leer la copia.'));
+    });
+  }
+
+  async replaceBackupData(data: SmartCalendarBackupData): Promise<void> {
+    const database = await this.openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction([...backupStoreNames], 'readwrite');
+      let failure: unknown;
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () => reject(failure ?? transaction.error ?? new Error('No se pudo restaurar la copia.'));
+      try {
+        for (const name of backupStoreNames) {
+          const store = transaction.objectStore(name);
+          store.clear();
+          for (const record of data[name]) store.add(record);
+        }
+      } catch (error) {
+        failure = error;
+        transaction.abort();
+      }
+    });
+  }
+
+  async getAppPreference<T>(key: string): Promise<T | undefined> {
+    const preference = await this.performRequest<{ key: string; value: T } | undefined>(
+      appPreferenceStoreName, 'readonly', (store) => store.get(key)
+    );
+    return preference?.value;
+  }
+
+  async saveAppPreference<T>(key: string, value: T): Promise<void> {
+    await this.performRequest(appPreferenceStoreName, 'readwrite', (store) => store.put({ key, value }));
+  }
+
+  async getCalendarViewMode(): Promise<CalendarViewMode> {
+    const preference = await this.performRequest<{ key: string; value: unknown } | undefined>(
+      appPreferenceStoreName, 'readonly', (store) => store.get('calendarViewMode')
+    );
+    return isCalendarViewMode(preference?.value) ? preference.value : 'month';
+  }
+
+  async saveCalendarViewMode(viewMode: CalendarViewMode): Promise<void> {
+    await this.performRequest(appPreferenceStoreName, 'readwrite', (store) =>
+      store.put({ key: 'calendarViewMode', value: viewMode })
+    );
   }
 
   async createEvent(draft: CalendarEventDraft): Promise<CalendarEvent> {
@@ -141,6 +206,18 @@ export class CalendarStorageService {
 
   async getGoogleAccountConfigs(): Promise<GoogleCalendarAccountConfig[]> {
     return this.getAll<GoogleCalendarAccountConfig>(googleAccountStoreName);
+  }
+
+  async getGoogleEventFilters(): Promise<GoogleEventFilter[]> {
+    return this.getAll<GoogleEventFilter>(googleEventFilterStoreName);
+  }
+
+  async saveGoogleEventFilter(filter: GoogleEventFilter): Promise<void> {
+    await this.performRequest(googleEventFilterStoreName, 'readwrite', (store) => store.put(filter));
+  }
+
+  async deleteGoogleEventFilter(id: string): Promise<void> {
+    await this.performRequest(googleEventFilterStoreName, 'readwrite', (store) => store.delete(id));
   }
 
   async saveGoogleAccountConfig(account: GoogleCalendarAccountConfig): Promise<GoogleCalendarAccountConfig> {
@@ -295,6 +372,14 @@ export class CalendarStorageService {
 
         if (!database.objectStoreNames.contains(googleAccountStoreName)) {
           database.createObjectStore(googleAccountStoreName, { keyPath: 'accountId' });
+        }
+
+        if (!database.objectStoreNames.contains(googleEventFilterStoreName)) {
+          database.createObjectStore(googleEventFilterStoreName, { keyPath: 'id' });
+        }
+
+        if (!database.objectStoreNames.contains(appPreferenceStoreName)) {
+          database.createObjectStore(appPreferenceStoreName, { keyPath: 'key' });
         }
 
         if (event.oldVersion < 2 && database.objectStoreNames.contains(eventStoreName)) {

@@ -137,3 +137,74 @@
     flex: 1 1 auto;
   }
 }
+
+:host ::ng-deep .google-event-dialog {
+  max-width: calc(100vw - 32px);
+  max-height: 85dvh;
+  overflow: hidden;
+}
+
+:host ::ng-deep .google-event-dialog .p-dialog-header {
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid #e0e8e2;
+}
+
+:host ::ng-deep .google-event-dialog .p-dialog-header-actions {
+  flex: 0 0 auto;
+}
+
+:host ::ng-deep .google-event-dialog .p-dialog-header-actions .p-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+:host ::ng-deep .google-event-dialog .p-dialog-content {
+  min-height: 0;
+  padding: 18px 24px 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.google-dialog-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding-top: 7px;
+}
+
+.google-dialog-color {
+  width: 5px;
+  min-height: 28px;
+  flex: 0 0 5px;
+  align-self: stretch;
+  border-radius: 3px;
+}
+
+.google-dialog-heading h2 {
+  min-width: 0;
+  margin: 0;
+  color: #193a36;
+  font-size: 21px;
+  line-height: 1.4;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 520px) {
+  :host ::ng-deep .google-event-dialog .p-dialog-header {
+    padding: 18px 16px 14px;
+    gap: 8px;
+  }
+
+  :host ::ng-deep .google-event-dialog .p-dialog-content {
+    padding: 16px;
+  }
+
+  .google-dialog-heading h2 {
+    font-size: 18px;
+  }
+}

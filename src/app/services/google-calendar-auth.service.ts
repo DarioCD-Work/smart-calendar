@@ -102,7 +102,7 @@ export class GoogleCalendarAuthService {
       accessToken: response.access_token,
       expiresAt: Date.now() + Math.max(60, response.expires_in ?? 3600) * 1000
     });
-    this.activeAccountIds.update((accounts) => accounts.includes(accountId) ? accounts : [...accounts, accountId]);
+    this.activeAccountIds.update((accounts) => accounts.includes(accountId) ? [...accounts] : [...accounts, accountId]);
   }
 
   getAccessToken(accountId: string): string | null {
@@ -118,6 +118,11 @@ export class GoogleCalendarAuthService {
 
   hasAccessToken(accountId: string): boolean {
     return this.getAccessToken(accountId) !== null;
+  }
+
+  hasValidAccessToken(accountId: string): boolean {
+    const session = this.tokenSessions.get(accountId);
+    return Boolean(session && session.expiresAt > Date.now() + 30_000);
   }
 
   forgetAccount(accountId: string): void {

@@ -1,14 +1,27 @@
 <p-dialog
+  #detailsDialog
   [header]="occurrence?.event?.title ?? 'Evento'"
   [visible]="visible && occurrence !== null"
   [modal]="true"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: 'min(520px, calc(100vw - 24px))' }"
-  styleClass="event-details-dialog"
+  [style]="{ width: isGoogleEvent ? googleDetailWidth : 'min(520px, calc(100vw - 24px))', maxHeight: isGoogleEvent ? '85dvh' : null }"
+  [styleClass]="isGoogleEvent ? 'event-details-dialog google-event-dialog' : 'event-details-dialog'"
+  [closeAriaLabel]="isGoogleEvent ? 'Cerrar detalles' : undefined"
   (visibleChange)="onVisibleChange($event)"
 >
+  @if (isGoogleEvent) {
+    <ng-template #header>
+      <div class="google-dialog-heading">
+        <span class="google-dialog-color" [style.backgroundColor]="occurrence?.event?.color ?? occurrence?.event?.calendarColor ?? '#4285F4'" aria-hidden="true"></span>
+        <h2 [id]="detailsDialog.ariaLabelledBy">{{ occurrence?.event?.title }}</h2>
+      </div>
+    </ng-template>
+  }
   @if (occurrence; as item) {
+    @if (item.event.source === 'google') {
+      <app-google-event-detail [occurrence]="item" />
+    } @else {
     <div class="event-details">
       <p class="event-date">{{ formatDateRange(item.startDate, item.endDate) }}</p>
 
@@ -29,29 +42,12 @@
         </p>
       }
 
-      @if (item.event.source === 'google') {
-        <section class="google-event-origin">
-          <strong><span class="google-origin-mark" aria-hidden="true">G</span> Google Calendar</strong>
-          <span>{{ item.event.calendarName }} · {{ item.event.accountEmail }}</span>
-            @if (item.event.isRecurring) {
-              <small>Ocurrencia de un evento recurrente de Google Calendar.</small>
-            }
-        </section>
-      }
-
       @if (item.event.description) {
         <p class="event-notes">{{ item.event.description }}</p>
       }
 
       @if (item.event.location) {
         <p class="event-location"><i class="pi pi-map-marker" aria-hidden="true"></i> {{ item.event.location }}</p>
-      }
-
-      @if (item.event.source === 'google' && item.event.htmlLink) {
-        <a class="google-event-link" [href]="item.event.htmlLink" target="_blank" rel="noopener noreferrer">
-          Abrir en Google Calendar
-          <i class="pi pi-external-link" aria-hidden="true"></i>
-        </a>
       }
 
       @if (localEvent?.recurrence; as recurrence) {
@@ -103,5 +99,6 @@
         }
       </div>
     </div>
+    }
   }
 </p-dialog>

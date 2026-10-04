@@ -1,0 +1,48 @@
+<section class="backup-settings" aria-labelledby="backup-heading">
+  <h2 id="backup-heading">Copia de seguridad</h2>
+  <div class="backup-buttons">
+    <p-button label="Exportar copia de seguridad" icon="pi pi-download" severity="secondary" [outlined]="true"
+      ariaLabel="Exportar copia de seguridad" [disabled]="busy()" (onClick)="export()" />
+    <p-button label="Importar copia de seguridad" icon="pi pi-upload" severity="secondary" [outlined]="true"
+      ariaLabel="Importar copia de seguridad" [disabled]="busy()" (onClick)="fileInput.click()" />
+    @if (shareAvailable()) {
+      <p-button label="Guardar archivo" icon="pi pi-save" severity="secondary" [text]="true"
+        ariaLabel="Guardar archivo" [disabled]="busy()" (onClick)="savePreparedFile()" />
+    }
+  </div>
+  <input #fileInput type="file" accept=".json,application/json" hidden (change)="import($event)" />
+  @if (exportedAt(); as exportedAt) {
+    <p class="last-export">Última exportación: {{ exportedAt | date:'dd/MM/yyyy · HH:mm' }}</p>
+  }
+  @if (message() && !pending()) {
+    <p-message [severity]="severity()">{{ message() }}</p-message>
+  }
+</section>
+
+<p-dialog header="Restaurar copia" [visible]="visible && pending() !== null" [modal]="true"
+  [draggable]="false" [resizable]="false" [closable]="!busy()" [closeOnEscape]="!busy()"
+  closeAriaLabel="Cancelar restauración"
+  [style]="{ width: 'min(440px, calc(100vw - 32px))', maxHeight: '85dvh' }"
+  appendTo="body" styleClass="backup-restore-dialog" (visibleChange)="!$event && cancel()">
+  @if (pending(); as copy) {
+    <section class="restore-content">
+      <p class="copy-date">Copia: {{ copy.exportedAt | date:'dd/MM/yyyy · HH:mm' }}</p>
+      <ul class="backup-counts">
+        <li>{{ copy.data.events.length }} {{ copy.data.events.length === 1 ? 'evento local' : 'eventos locales' }}</li>
+        <li>{{ copy.data.categories.length }} {{ copy.data.categories.length === 1 ? 'categoría' : 'categorías' }}</li>
+        <li>{{ copy.data.googleAccounts.length }} {{ copy.data.googleAccounts.length === 1 ? 'cuenta Google configurada' : 'cuentas Google configuradas' }}</li>
+        <li>{{ copy.data.calendarSources.length }} {{ copy.data.calendarSources.length === 1 ? 'preferencia de calendarios' : 'preferencias de calendarios' }}</li>
+        <li>{{ copy.data.googleEventFilters.length }} {{ copy.data.googleEventFilters.length === 1 ? 'filtro Google' : 'filtros Google' }}</li>
+        <li>Configuración incluida</li>
+      </ul>
+      <p class="replace-warning">Esta copia sustituirá todos tus eventos y ajustes locales actuales. No se mezclarán los datos.</p>
+      @if (message()) {
+        <p-message [severity]="severity()">{{ message() }}</p-message>
+      }
+    </section>
+  }
+  <ng-template #footer>
+    <p-button label="Cancelar" severity="secondary" [outlined]="true" [disabled]="busy()" (onClick)="cancel()" />
+    <p-button label="Restaurar" icon="pi pi-upload" ariaLabel="Restaurar" [disabled]="busy()" (onClick)="restore()" />
+  </ng-template>
+</p-dialog>

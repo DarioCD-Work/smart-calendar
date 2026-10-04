@@ -11,6 +11,14 @@ import {
 import { GoogleCalendarAuthService } from './google-calendar-auth.service';
 import { CalendarSourceService } from './calendar-source.service';
 import { addCalendarDays, formatCalendarDate, parseCalendarDate } from './calendar-date.service';
+import { WallClockService } from './wall-clock.service';
+
+export type GoogleSyncStatus = 'idle' | 'syncing' | 'success' | 'offline' | 'auth-required' | 'error';
+
+interface AccountSyncResult {
+  failed: boolean;
+  lastSuccessfulSync: Date | null;
+}
 
 interface CachedEvents {
   expiresAt: number;
@@ -26,6 +34,11 @@ interface CachedColors {
 export class GoogleCalendarService implements OnDestroy {
   private readonly auth = inject(GoogleCalendarAuthService);
   private readonly sources = inject(CalendarSourceService);
+  private readonly clock = inject(WallClockService);
+  private readonly onlineState = signal(navigator.onLine);
+  private readonly accountResults = signal<Record<string, AccountSyncResult>>({});
+  private lastNetworkSuccessAt = 0;
+  private readonly accountNetworkSuccess = new Map<string, number>();
   private readonly responseCache = new Map<string, CachedEvents>();
   private cachedColors?: CachedColors;
   private colorsRequest?: Promise<GoogleCalendarColorsResponse>;
@@ -36,19 +49,52 @@ export class GoogleCalendarService implements OnDestroy {
   private syncTimer?: ReturnType<typeof setTimeout>;
   private activeRefresh?: { key: string; controller: AbortController; promise: Promise<void> };
   private readonly onForeground = () => {
+    this.onlineState.set(navigator.onLine);
     if (document.visibilityState === 'visible') {
       void this.synchronizeAutomatically();
     } else {
       this.clearSyncTimer();
     }
   };
-  private readonly onOnline = () => void this.synchronizeAutomatically();
+  private readonly onOnline = () => {
+    this.onlineState.set(true);
+    void this.synchronizeAutomatically();
+  };
+  private readonly onOffline = () => this.onlineState.set(false);
 
   readonly occurrences = signal<CalendarDisplayOccurrence[]>([]);
+  readonly todayOccurrences = signal<CalendarDisplayOccurrence[]>([]);
+  readonly lastSuccessfulSync = signal<Date | null>(null);
+  readonly nextAutomaticSync = signal<number | null>(null);
+  readonly syncAccounts = computed(() => {
+    this.clock.now();
+    return this.sources.getGoogleAccountViews(this.connectedAccountIds()).map(account => {
+      const result = this.accountResults()[account.accountId];
+      const status: GoogleSyncStatus = !this.onlineState() ? 'offline'
+        : !this.auth.hasValidAccessToken(account.accountId) ? 'auth-required'
+        : this.loading() ? 'syncing'
+        : result?.failed ? 'error'
+        : result?.lastSuccessfulSync ? 'success' : 'idle';
+      return { ...account, status, lastSuccessfulSync: result?.lastSuccessfulSync ?? null };
+    });
+  });
+  readonly syncStatus = computed<GoogleSyncStatus>(() => {
+    if (!this.onlineState()) return 'offline';
+    if (this.loading()) return 'syncing';
+    const statuses = this.syncAccounts().map(account => account.status);
+    if (statuses.includes('auth-required')) return 'auth-required';
+    if (statuses.includes('error')) return 'error';
+    return this.lastSuccessfulSync() || statuses.includes('success') ? 'success' : 'idle';
+  });
+  private readonly cachedKnownEvents = signal<CalendarDisplayEvent[]>([]);
+  readonly knownEvents = this.cachedKnownEvents.asReadonly();
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly isConfigured = computed(() => this.auth.isConfigured);
-  readonly connectedAccountIds = this.auth.activeAccountIds.asReadonly();
+  readonly connectedAccountIds = computed(() => {
+    this.clock.now();
+    return this.auth.activeAccountIds().filter(accountId => this.auth.hasValidAccessToken(accountId));
+  });
 
   initialize(): Promise<void> {
     this.initialization ??= this.restoreRememberedAccounts();
@@ -61,9 +107,11 @@ export class GoogleCalendarService implements OnDestroy {
     }
 
     this.syncEnabled = true;
+    this.onlineState.set(navigator.onLine);
     document.addEventListener('visibilitychange', this.onForeground);
     window.addEventListener('pageshow', this.onForeground);
     window.addEventListener('online', this.onOnline);
+    window.addEventListener('offline', this.onOffline);
     this.scheduleSync();
   }
 
@@ -74,6 +122,7 @@ export class GoogleCalendarService implements OnDestroy {
       document.removeEventListener('visibilitychange', this.onForeground);
       window.removeEventListener('pageshow', this.onForeground);
       window.removeEventListener('online', this.onOnline);
+      window.removeEventListener('offline', this.onOffline);
     }
     this.activeRefresh?.controller.abort();
     this.activeRefresh = undefined;
@@ -86,6 +135,7 @@ export class GoogleCalendarService implements OnDestroy {
   }
 
   private clearSyncTimer(): void {
+    this.nextAutomaticSync.set(null);
     if (this.syncTimer !== undefined) {
       clearTimeout(this.syncTimer);
       this.syncTimer = undefined;
@@ -95,6 +145,7 @@ export class GoogleCalendarService implements OnDestroy {
   private scheduleSync(): void {
     this.clearSyncTimer();
     if (this.syncEnabled && document.visibilityState === 'visible') {
+      this.nextAutomaticSync.set(Date.now() + 60_000);
       this.syncTimer = setTimeout(() => void this.synchronizeAutomatically(), 60_000);
     }
   }
@@ -159,6 +210,7 @@ export class GoogleCalendarService implements OnDestroy {
 
       await this.sources.saveGoogleCalendars(accountId, accountId, calendars);
       this.auth.storeAccessToken(accountId, tokenResponse);
+      this.recordAccountResult(accountId, false, new Date());
       await this.refreshCurrentRange();
       return accountId;
     } catch (error) {
@@ -173,6 +225,11 @@ export class GoogleCalendarService implements OnDestroy {
   async disconnectAccount(accountId: string): Promise<void> {
     await this.sources.disconnectGoogleAccount(accountId);
     this.auth.forgetAccount(accountId);
+    this.accountResults.update(results => {
+      const next = { ...results };
+      delete next[accountId];
+      return next;
+    });
     await this.refreshCurrentRange();
   }
 
@@ -216,8 +273,15 @@ export class GoogleCalendarService implements OnDestroy {
     const sequence = ++this.refreshSequence;
     const visibleCalendars = this.sources.googleCalendars().filter((calendar) => calendar.visible);
 
+    if (!navigator.onLine) {
+      this.onlineState.set(false);
+      this.loading.set(false);
+      return;
+    }
+
     if (visibleCalendars.length === 0) {
       this.publishOccurrences([]);
+      this.todayOccurrences.set([]);
       this.error.set(null);
       this.loading.set(false);
       return;
@@ -232,6 +296,7 @@ export class GoogleCalendarService implements OnDestroy {
 
     if (authorizedCalendars.length === 0) {
       this.publishOccurrences([]);
+      this.todayOccurrences.set([]);
       this.error.set('Vuelve a conectar las cuentas Google para actualizar sus calendarios.');
       this.loading.set(false);
       return;
@@ -248,6 +313,11 @@ export class GoogleCalendarService implements OnDestroy {
 
     this.loading.set(true);
     const failures: string[] = [];
+    const failedAccountIds = new Set<string>();
+    const today = formatCalendarDate(new Date());
+    const todayByCalendar = new Map<string, CalendarDisplayOccurrence[]>();
+    const networkSuccessBefore = this.lastNetworkSuccessAt;
+    const previousAccountSuccess = new Map(this.accountNetworkSuccess);
     const metadataRequests = new Map<string, Promise<GoogleCalendarListEntry[]>>();
 
     try {
@@ -272,6 +342,7 @@ export class GoogleCalendarService implements OnDestroy {
             const entries = await metadataRequest;
             const entry = entries.find((item) => item.id === calendar.calendarId && !item.deleted);
             if (!entry) {
+              todayByCalendar.set(`${calendar.accountId}\u0000${calendar.calendarId}`, []);
               this.responseCache.delete(JSON.stringify([
                 calendar.accountId, calendar.calendarId, rangeStart, rangeEnd
               ]));
@@ -287,11 +358,17 @@ export class GoogleCalendarService implements OnDestroy {
               timeZone: entry.timeZone ?? calendar.timeZone
             };
           }
-          return await this.getCalendarOccurrences(currentCalendar, accessToken, rangeStart, rangeEnd, forceRefresh, signal);
+          const occurrences = await this.getCalendarOccurrences(currentCalendar, accessToken, rangeStart, rangeEnd, forceRefresh, signal);
+          const todays = rangeStart <= today && rangeEnd >= today
+            ? occurrences.filter(occurrence => occurrence.startDate <= today && occurrence.endDate >= today)
+            : await this.getCalendarOccurrences(currentCalendar, accessToken, today, today, forceRefresh, signal);
+          todayByCalendar.set(`${calendar.accountId}\u0000${calendar.calendarId}`, todays);
+          return occurrences;
         } catch (error) {
           if (signal.aborted) {
             return [];
           }
+          failedAccountIds.add(calendar.accountId);
           if (error instanceof GoogleCalendarApiError && error.status === 401) {
             this.auth.forgetAccount(calendar.accountId);
             failures.push(calendar.accountEmail);
@@ -307,11 +384,31 @@ export class GoogleCalendarService implements OnDestroy {
       if (sequence !== this.refreshSequence || signal.aborted) {
         if (sequence === this.refreshSequence && signal.aborted) {
           this.error.set('No se pudieron actualizar los calendarios de Google.');
+          for (const calendar of authorizedCalendars) this.recordAccountResult(calendar.accountId, true);
         }
         return;
       }
 
       this.publishOccurrences(calendarOccurrences.flat());
+      const todays = authorizedCalendars.flatMap(calendar => {
+        const key = `${calendar.accountId}\u0000${calendar.calendarId}`;
+        return todayByCalendar.get(key) ?? this.responseCache.get(JSON.stringify([
+          calendar.accountId, calendar.calendarId, today, today
+        ]))?.occurrences ?? this.todayOccurrences().filter(occurrence =>
+          occurrence.event.accountId === calendar.accountId && occurrence.event.calendarId === calendar.calendarId
+          && occurrence.startDate <= today && occurrence.endDate >= today);
+      });
+      this.todayOccurrences.set([...new Map(todays.map(occurrence => [occurrence.eventId, occurrence])).values()]);
+      const hadNetworkSuccess = this.lastNetworkSuccessAt > networkSuccessBefore;
+      for (const accountId of new Set(authorizedCalendars.map(calendar => calendar.accountId))) {
+        if (failedAccountIds.has(accountId)) this.recordAccountResult(accountId, true);
+        else if ((this.accountNetworkSuccess.get(accountId) ?? 0) > (previousAccountSuccess.get(accountId) ?? 0)) {
+          this.recordAccountResult(accountId, false, new Date());
+        }
+      }
+      if (hadNetworkSuccess && !failures.length && !unauthenticatedAccounts.length) {
+        this.lastSuccessfulSync.set(new Date());
+      }
       this.error.set(failures.length || unauthenticatedAccounts.length
         ? 'No se pudieron actualizar todos los calendarios de Google. Reconecta las cuentas afectadas.'
         : null);
@@ -330,6 +427,13 @@ export class GoogleCalendarService implements OnDestroy {
     if (JSON.stringify(next) !== JSON.stringify(this.occurrences())) {
       this.occurrences.set(next);
     }
+  }
+
+  private recordAccountResult(accountId: string, failed: boolean, successfulAt?: Date): void {
+    this.accountResults.update(results => ({
+      ...results,
+      [accountId]: { failed, lastSuccessfulSync: successfulAt ?? results[accountId]?.lastSuccessfulSync ?? null }
+    }));
   }
 
   async refreshCurrentRange(): Promise<void> {
@@ -395,6 +499,20 @@ export class GoogleCalendarService implements OnDestroy {
       return cached.occurrences;
     }
 
+    if (!forceRefresh) {
+      for (const [storedKey, entry] of this.responseCache) {
+        const [accountId, calendarId, cachedStart, cachedEnd] = JSON.parse(storedKey) as [string, string, string, string];
+        if (entry.expiresAt > Date.now()
+          && accountId === calendar.accountId && calendarId === calendar.calendarId
+          && cachedStart <= rangeStart && cachedEnd >= rangeEnd) {
+          const occurrences = entry.occurrences.filter((occurrence) =>
+            occurrence.startDate <= rangeEnd && occurrence.endDate >= rangeStart);
+          this.responseCache.set(cacheKey, { expiresAt: entry.expiresAt, occurrences });
+          return occurrences;
+        }
+      }
+    }
+
     const endExclusive = addCalendarDays(rangeEnd, 1);
     const parameters = new URLSearchParams({
       singleEvents: 'true',
@@ -418,7 +536,12 @@ export class GoogleCalendarService implements OnDestroy {
       .map((event) => normalizeGoogleEvent(event, calendar, colors));
 
     signal?.throwIfAborted();
+    this.lastNetworkSuccessAt = Date.now();
+    this.accountNetworkSuccess.set(calendar.accountId, this.lastNetworkSuccessAt);
     this.responseCache.set(cacheKey, { expiresAt: Date.now() + 60_000, occurrences });
+    this.cachedKnownEvents.set([...new Map([...this.responseCache.values()]
+      .flatMap((entry) => entry.occurrences)
+      .map((occurrence) => [occurrence.eventId, occurrence.event])).values()]);
     return occurrences;
   }
 
@@ -522,6 +645,7 @@ export function normalizeGoogleEvent(
     description: event.description,
     location: event.location,
     htmlLink: event.htmlLink,
+    attachments: event.attachments?.map(({ fileUrl, title, mimeType }) => ({ fileUrl, title, mimeType })),
     isRecurring: Boolean(event.recurringEventId)
   };
 

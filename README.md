@@ -61,3 +61,15 @@ For more information on using the Angular CLI, including detailed command refere
 ## Google Calendar
 
 La integración es de solo lectura y requiere un OAuth Client ID público. Consulta la [guía de configuración de Google Calendar](docs/google-calendar-setup.md) para configurar Google Cloud Console, los orígenes autorizados y la reconexión OAuth de la PWA.
+
+## Tiempo y resumen de Hoy
+
+El tiempo utiliza las APIs públicas de previsión y geocodificación de [Open-Meteo](https://open-meteo.com/) sin claves privadas, para uso no comercial conforme a sus condiciones. Los datos de ubicaciones proceden de GeoNames. Selecciona una localidad en Ajustes > Tiempo; no se solicita geolocalización. Las coordenadas, el interruptor y el último dato se guardan en el almacén IndexedDB `appPreferences`, sin migrar la base de datos.
+
+La previsión se actualiza aproximadamente cada 30 minutos y al volver a primer plano o recuperar conexión si el dato no es reciente. Sin conexión se conserva la última lectura. El indicador Google muestra la comunicación y autorización de cada cuenta, independientemente de los filtros. El botón de lista junto a Hoy resume la fecha real con las mismas reglas de visibilidad y recurrencia del calendario, sin cambiar el periodo que se está consultando.
+
+## Copias de seguridad
+
+Ajustes > Copia de seguridad permite descargar un archivo `smart-calendar-backup-YYYY-MM-DD.json`. En dispositivos con Web Share también aparece Guardar archivo para guardarlo en Archivos o compartirlo mediante el sistema. La copia contiene los eventos locales completos, categorías, preferencias de calendarios, cuentas Google no sensibles, filtros y configuración de vista/tiempo. No contiene tokens, credenciales, eventos descargados de Google ni caché meteorológica.
+
+El formato `smart-calendar-backup`, versión 1, se valida antes de mostrar una confirmación. Restaurar sustituye las seis stores en una única transacción IndexedDB; si una escritura falla, se revierte todo. Solo después del commit se muestra el éxito y se recarga la aplicación automáticamente. Google puede necesitar reconexión y el tiempo vuelve a consultar su ubicación guardada. Las fechas locales siguen siendo strings `YYYY-MM-DD`, sin conversiones de zona horaria. Guarda una copia fuera del dispositivo: si Safari elimina IndexedDB, también elimina los datos locales, no el archivo que hayas guardado.

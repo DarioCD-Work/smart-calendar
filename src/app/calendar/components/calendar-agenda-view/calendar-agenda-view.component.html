@@ -1,0 +1,42 @@
+<div class="agenda-scroll" aria-label="Agenda">
+  @for (item of days; track item.day.dateKey) {
+    <section class="agenda-day" [class.today]="item.day.isToday" [attr.aria-label]="item.day.accessibleLabel">
+      <header class="agenda-day-header">
+        <h2>
+          @if (item.day.isToday) { <span class="today-label">Hoy · </span> }
+          {{ dayLabel(item.day) }}
+        </h2>
+        <button class="agenda-add" type="button"
+          [attr.aria-label]="'Crear evento el ' + item.day.accessibleLabel"
+          title="Crear evento" (click)="daySelected.emit(item.day)">
+          <i class="pi pi-plus" aria-hidden="true"></i>
+        </button>
+      </header>
+      <div class="agenda-events">
+        @for (occurrence of item.events; track occurrence.eventId + occurrence.occurrenceKey) {
+          <button class="agenda-event" type="button"
+            [style.--event-color]="occurrence.event.color ?? '#687975'"
+            (click)="eventSelected.emit(occurrence)">
+            <span class="agenda-time">
+              {{ occurrence.event.allDay ? 'Todo el día' : occurrence.event.startTime ?? occurrence.event.endTime ?? 'Sin hora' }}
+            </span>
+            <span class="agenda-event-copy">
+              <strong>{{ occurrence.event.title }}</strong>
+              @if (occurrence.endDate > occurrence.startDate) {
+                <small>{{ occurrenceRange(occurrence) }}</small>
+              }
+            </span>
+            @if (occurrence.event.source === 'google') {
+              <span class="google-event-mark" aria-label="Google Calendar">G</span>
+            }
+            <i class="pi pi-angle-right" aria-hidden="true"></i>
+          </button>
+        } @empty {
+          <p class="agenda-empty">No hay eventos</p>
+        }
+      </div>
+    </section>
+  } @empty {
+    <p class="agenda-empty-range">No hay eventos en este periodo.</p>
+  }
+</div>

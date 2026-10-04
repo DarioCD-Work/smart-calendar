@@ -1,0 +1,27 @@
+<button class="summary-trigger" type="button" title="Resumen de hoy"
+  [attr.aria-label]="'Resumen de hoy: ' + events().length + ' eventos'" (click)="summary.toggle($event)">
+  <i class="pi pi-list" aria-hidden="true"></i><span>{{ events().length }}</span>
+</button>
+<p-popover #summary appendTo="body" [style]="{ width: 'min(380px, calc(100vw - 24px))' }">
+  <section class="today-panel" aria-label="Resumen de hoy">
+    <h2>Hoy</h2>
+    <p class="today-date">{{ dateLabel() }}</p>
+    @if (events().length) {
+      <p class="event-count">{{ events().length }} {{ events().length === 1 ? 'evento' : 'eventos' }}</p>
+      <ul class="summary-events">
+        @for (occurrence of events(); track occurrence.eventId) {
+          <li><button type="button" (click)="select(occurrence)" [style.--summary-color]="occurrence.event.color || '#687975'">
+            <span class="summary-time">{{ occurrence.event.allDay ? 'Todo el día' : occurrence.event.startTime || occurrence.event.endTime || 'Sin hora' }}</span>
+            <span class="summary-copy"><strong>{{ occurrence.event.title }}</strong>
+              @if (occurrence.startDate !== occurrence.endDate) {
+                <small>{{ occurrenceRange(occurrence) }}</small>
+              }
+            </span>
+          </button></li>
+        }
+      </ul>
+    } @else {
+      <p class="summary-empty">Sin eventos para hoy</p>
+    }
+  </section>
+</p-popover>

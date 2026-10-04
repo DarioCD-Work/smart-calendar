@@ -21,7 +21,14 @@ export interface CalendarDisplayEvent {
   location?: string;
   htmlLink?: string;
   isRecurring?: boolean;
+  attachments?: CalendarDisplayAttachment[];
   localEvent?: CalendarEvent;
+}
+
+export interface CalendarDisplayAttachment {
+  fileUrl?: string;
+  title?: string;
+  mimeType?: string;
 }
 
 export interface CalendarDisplayOccurrence {

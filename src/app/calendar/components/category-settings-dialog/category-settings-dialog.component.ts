@@ -5,6 +5,9 @@ import { ColorPicker } from 'primeng/colorpicker';
 import { ColorPickerModule } from 'primeng/colorpicker';
 import { DialogModule } from 'primeng/dialog';
 import { EventCategory } from '../../../models/event-category.model';
+import { CalendarViewMode, calendarViewOptions } from '../../../models/calendar-view-mode.model';
+import { WeatherSettingsComponent } from '../weather-settings/weather-settings.component';
+import { BackupSettingsComponent } from '../backup-settings/backup-settings.component';
 
 export interface CategoryColorChange {
   categoryId: string;
@@ -13,7 +16,7 @@ export interface CategoryColorChange {
 
 @Component({
   selector: 'app-category-settings-dialog',
-  imports: [ButtonModule, ColorPickerModule, DialogModule, FormsModule],
+  imports: [ButtonModule, ColorPickerModule, DialogModule, FormsModule, WeatherSettingsComponent, BackupSettingsComponent],
   templateUrl: './category-settings-dialog.component.html',
   styleUrl: './category-settings-dialog.component.css'
 })
@@ -21,9 +24,13 @@ export class CategorySettingsDialogComponent {
   @Input() visible = false;
   @Input() categories: EventCategory[] = [];
   @Input() error: string | null = null;
+  @Input() viewMode: CalendarViewMode = 'month';
 
   @Output() readonly closed = new EventEmitter<void>();
   @Output() readonly colorChanged = new EventEmitter<CategoryColorChange>();
+  @Output() readonly viewChanged = new EventEmitter<CalendarViewMode>();
+
+  readonly viewOptions = calendarViewOptions;
 
   @ViewChildren(ColorPicker) private colorPickers?: QueryList<ColorPicker>;
 

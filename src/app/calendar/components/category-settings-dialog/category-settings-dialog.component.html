@@ -1,5 +1,5 @@
 <p-dialog
-  header="Categorías"
+  header="Ajustes"
   [visible]="visible"
   [modal]="true"
   [draggable]="false"
@@ -8,6 +8,20 @@
   styleClass="category-settings-dialog"
   (visibleChange)="onVisibleChange($event)"
 >
+  <fieldset class="view-preference">
+    <legend>Vista del calendario</legend>
+    <div class="view-segments">
+      @for (option of viewOptions; track option.value) {
+        <label class="view-option" [class.active]="viewMode === option.value">
+          <input type="radio" name="calendarViewMode" [value]="option.value"
+            [checked]="viewMode === option.value" (change)="viewChanged.emit(option.value)" />
+          <span>{{ option.label }}</span>
+        </label>
+      }
+    </div>
+  </fieldset>
+  <app-weather-settings />
+  <h2 class="category-section-title">Colores de categorías</h2>
   <div class="category-settings-list">
     @for (category of categories; track category.id) {
       <div class="category-setting-row">
@@ -31,6 +45,8 @@
       </div>
     }
   </div>
+
+  <app-backup-settings [visible]="visible" />
 
   @if (error) {
     <p class="category-settings-error" role="alert">{{ error }}</p>

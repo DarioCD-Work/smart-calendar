@@ -38,6 +38,13 @@ export interface GoogleCalendarApiEvent {
   recurringEventId?: string;
   originalStartTime?: GoogleCalendarDateTime;
   eventType?: string;
+  attachments?: GoogleCalendarAttachment[];
+}
+
+export interface GoogleCalendarAttachment {
+  fileUrl?: string;
+  title?: string;
+  mimeType?: string;
 }
 
 export interface GoogleCalendarDateTime {

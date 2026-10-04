@@ -78,6 +78,23 @@
               </label>
             }
           </div>
+
+          <section class="hidden-events" [attr.aria-label]="'Eventos ocultos de ' + account.email">
+            <h3>Eventos ocultos</h3>
+            @for (filter of filtersForAccount(account.accountId); track filter.id) {
+              <div class="hidden-event-row">
+                <div class="hidden-event-copy">
+                  <strong>{{ filter.value }}</strong>
+                  <small>{{ filterScopeName(filter) }}</small>
+                </div>
+                <p-button icon="pi pi-times" severity="secondary" [text]="true"
+                  [ariaLabel]="'Volver a mostrar ' + filter.value"
+                  (onClick)="filterRemoved.emit(filter.id)" />
+              </div>
+            }
+            <p-button label="Ocultar eventos" icon="pi pi-plus" severity="secondary" [text]="true"
+              (onClick)="openEventFilters(account)" />
+          </section>
         </div>
       }
 
@@ -103,9 +120,52 @@
     @if (error) {
       <p class="google-error" role="alert">{{ error }}</p>
     }
+    @if (filterError) {
+      <p class="google-error" role="alert">{{ filterError }}</p>
+    }
 
     <div class="dialog-actions">
-      <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="closed.emit()" />
+      <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="close()" />
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog header="Ocultar eventos" [visible]="visible && filterAccountId !== null"
+  [modal]="true" [draggable]="false" [resizable]="false"
+  [style]="{ width: 'min(520px, calc(100vw - 32px))' }"
+  styleClass="hidden-events-dialog"
+  (visibleChange)="filterAccountId = $event ? filterAccountId : null">
+  <div class="hidden-events-controls">
+    <p class="filter-account-email">{{ filterAccount?.email }}</p>
+    <label class="filter-field">
+      <span>Calendario</span>
+      <select [(ngModel)]="filterCalendarId">
+        <option value="">Todos los calendarios de esta cuenta</option>
+        @for (calendar of filterAccount?.calendars ?? []; track calendar.id) {
+          <option [value]="calendar.calendarId">{{ calendar.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="filter-field">
+      <span>Buscar</span>
+      <input type="search" [(ngModel)]="titleSearch" autocomplete="off" />
+    </label>
+    <div class="hidden-title-list">
+      @for (title of uniqueTitles; track title) {
+        <label class="hidden-title-option">
+          <input type="checkbox" [checked]="!!titleFilter(title)"
+            [attr.aria-label]="'Ocultar ' + title" (change)="setTitleHidden(title, $event)" />
+          <span>{{ title }}</span>
+        </label>
+      } @empty {
+        <p class="empty-google">No hay títulos cargados que coincidan.</p>
+      }
+    </div>
+    @if (filterError) {
+      <p class="google-error" role="alert">{{ filterError }}</p>
+    }
+    <div class="dialog-actions">
+      <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="filterAccountId = null" />
     </div>
   </div>
 </p-dialog>

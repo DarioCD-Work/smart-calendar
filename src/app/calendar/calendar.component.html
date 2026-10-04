@@ -2,31 +2,31 @@
   @if (storageError(); as error) {
     <p class="storage-error" role="alert">{{ error }}</p>
   }
-  @if (googleCalendarError(); as googleError) {
-    <p class="google-calendar-error" role="status">{{ googleError }}</p>
-  }
-
   <header class="calendar-toolbar" aria-label="Navegación del calendario">
     <p-button
       icon="pi pi-chevron-left"
       severity="secondary"
       [text]="true"
       styleClass="month-arrow"
-      ariaLabel="Mes anterior"
+      [ariaLabel]="previousPeriodLabel()"
       (onClick)="navigateMonth(-1)"
     />
 
-    <h1 class="month-title">{{ monthLabel() }}</h1>
+    <div class="calendar-heading">
+      <h1 class="month-title" [class.range-title]="viewMode() !== 'month'">{{ monthLabel() }}</h1>
+      <app-header-status (settingsRequested)="openCategorySettings()" (reconnectRequested)="connectGoogleAccount($event)" />
+    </div>
 
     <p-button
       icon="pi pi-chevron-right"
       severity="secondary"
       [text]="true"
       styleClass="month-arrow"
-      ariaLabel="Mes siguiente"
+      [ariaLabel]="nextPeriodLabel()"
       (onClick)="navigateMonth(1)"
     />
 
+    <div class="today-controls">
     <p-button
       label="Hoy"
       severity="secondary"
@@ -34,6 +34,8 @@
       styleClass="today-button"
       (onClick)="goToToday()"
     />
+    <app-today-summary (eventSelected)="showOccurrenceDetails($event)" />
+    </div>
 
     <p-button
       label="Calendarios"
@@ -50,32 +52,41 @@
       severity="secondary"
       [text]="true"
       styleClass="categories-button"
-      ariaLabel="Configurar categorías"
+      ariaLabel="Ajustes"
       (onClick)="openCategorySettings()"
     />
   </header>
 
-  <section class="month-view" aria-label="Vista mensual">
+  @if (viewMode() === 'agenda') {
+    <app-calendar-agenda-view [days]="agendaDays()"
+      (daySelected)="openCreateEvent($event)"
+      (eventSelected)="showOccurrenceDetails($event)" />
+  } @else {
+  <section class="month-view" [class.range-grid]="viewMode() !== 'month'"
+    [attr.aria-label]="viewMode() === 'month' ? 'Vista mensual' : viewMode() === 'week' ? 'Vista semanal' : 'Vista de 15 días'">
+    @if (viewMode() === 'month' || viewMode() === 'week') {
     <div class="weekday-row" role="row">
       @for (weekday of weekdays; track weekday) {
         <div class="weekday" role="columnheader">{{ weekday }}</div>
       }
     </div>
+    }
 
     <div
       class="days-grid"
       #daysGrid
       role="grid"
-      aria-label="Días del mes"
+      [attr.aria-label]="viewMode() === 'month' ? 'Días del mes' : 'Días del periodo'"
       [style.grid-template-rows]="'repeat(' + weekCount() + ', minmax(0, 1fr))'"
     >
       @for (week of weeks(); track week.index) {
-        <div class="week-row">
+        <div class="week-row" [style.grid-template-columns]="'repeat(' + week.days.length + ', minmax(0, 1fr))'">
           @for (dayView of week.days; track dayView.day.date.getTime()) {
             <div
               class="day-cell"
               role="gridcell"
               tabindex="0"
+              [class.fifteen-day-separator]="viewMode() === '15-days' && !$last"
               [class.outside-month]="!dayView.day.isCurrentMonth"
               [class.past]="dayView.day.isPast"
               [class.today]="dayView.day.isToday"
@@ -94,6 +105,9 @@
                 (click)="openCreateEvent(dayView.day); $event.stopPropagation()"
               >
                 <span class="day-number">{{ dayView.day.dayNumber }}</span>
+                @if (viewMode() !== 'month') {
+                  <span class="range-day-label">{{ rangeDayLabel(dayView.day) }}</span>
+                }
               </button>
 
               <div class="day-events">
@@ -125,7 +139,8 @@
             </div>
           }
 
-          <div class="week-event-layer" aria-label="Eventos de varios días">
+          <div class="week-event-layer" aria-label="Eventos de varios días"
+            [style.grid-template-columns]="'repeat(' + week.days.length + ', minmax(0, 1fr))'">
             @for (segment of week.segments; track segment.eventId + segment.occurrenceStartDate) {
               <button
                 class="multi-day-bar"
@@ -156,6 +171,7 @@
       }
     </div>
   </section>
+  }
 
   <app-event-editor-dialog
     [visible]="editorVisible()"
@@ -189,6 +205,8 @@
     [visible]="categorySettingsVisible()"
     [categories]="categories()"
     [error]="categorySettingsError()"
+    [viewMode]="viewMode()"
+    (viewChanged)="changeViewMode($event)"
     (closed)="closeCategorySettings()"
     (colorChanged)="updateCategoryColor($event)"
   />
@@ -200,11 +218,16 @@
     [googleConfigured]="googleCalendarConfigured()"
     [loading]="googleCalendarLoading()"
     [error]="googleCalendarError()"
+    [eventFilters]="googleEventFilters()"
+    [knownGoogleEvents]="knownGoogleEvents()"
+    [filterError]="googleFilterError()"
     (closed)="closeCalendarSources()"
     (localVisibilityChanged)="setLocalCalendarVisibility($event.categoryId, $event.visible)"
     (googleVisibilityChanged)="setGoogleCalendarVisibility($event.calendarId, $event.visible)"
     (connectGoogle)="connectGoogleAccount()"
     (reconnectGoogle)="connectGoogleAccount($event)"
     (disconnectGoogle)="disconnectGoogleAccount($event)"
+    (titleHidden)="hideGoogleEventTitle($event)"
+    (filterRemoved)="removeGoogleEventFilter($event)"
   />
 </main>
