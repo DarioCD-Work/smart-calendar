@@ -26,6 +26,7 @@ import { CalendarSourcesDialogComponent } from './components/calendar-sources-di
 import { CalendarAgendaDay, CalendarAgendaViewComponent } from './components/calendar-agenda-view/calendar-agenda-view.component';
 import { CalendarHeaderStatusComponent } from './components/header-status/header-status.component';
 import { TodaySummaryComponent } from './components/today-summary/today-summary.component';
+import { DayTimelineComponent } from './components/day-timeline/day-timeline.component';
 
 interface CalendarDayView {
   day: CalendarDay;
@@ -47,6 +48,7 @@ interface CalendarWeekView {
     ButtonModule,
     CalendarHeaderStatusComponent,
     TodaySummaryComponent,
+    DayTimelineComponent,
     CalendarAgendaViewComponent,
     CalendarSourcesDialogComponent,
     CategorySettingsDialogComponent,
@@ -99,6 +101,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   readonly categories = this.eventService.categories;
   readonly viewMode = this.viewPreferenceService.viewMode;
+  readonly isTimelineView = computed(() => this.viewMode() === 'week' || this.viewMode() === '15-days');
   readonly googleCalendarError = this.googleCalendarService.error;
   readonly googleCalendarLoading = this.googleCalendarService.loading;
   readonly googleCalendarConfigured = this.googleCalendarService.isConfigured;
@@ -109,6 +112,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   readonly editorError = signal<string | null>(null);
   readonly editorVisible = signal(false);
   readonly editorDate = signal<CalendarDate | null>(null);
+  readonly editorTime = signal<string | null>(null);
   readonly eventBeingEdited = signal<CalendarEvent | null>(null);
   readonly detailsOccurrence = signal<CalendarDisplayOccurrence | null>(null);
   readonly moreEventsDate = signal<CalendarDate | null>(null);
@@ -335,10 +339,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
   }
 
-  openCreateEvent(day: CalendarDay): void {
+  openCreateEvent(day: CalendarDay, initialTime?: string): void {
     this.selectDay(day);
     this.eventBeingEdited.set(null);
     this.editorDate.set(day.dateKey);
+    this.editorTime.set(initialTime ?? null);
     this.editorError.set(null);
     this.editorVisible.set(true);
   }

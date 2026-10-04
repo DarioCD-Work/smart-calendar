@@ -20,6 +20,7 @@ export class EventEditorDialogComponent implements OnChanges {
   @Input() visible = false;
   @Input() event: CalendarEvent | null = null;
   @Input() initialDate: CalendarDate = '';
+  @Input() initialTime: string | null = null;
   @Input() categories: EventCategory[] = [];
   @Input() storageError: string | null = null;
 
@@ -152,7 +153,7 @@ export class EventEditorDialogComponent implements OnChanges {
     this.startDate = event?.startDate ?? this.initialDate ?? formatCalendarDate(new Date());
     this.eventEndDate = event?.endDate ?? this.startDate;
     this.allDay = event?.allDay ?? false;
-    this.startTime = event?.startTime ?? '';
+    this.startTime = event ? event.startTime ?? '' : this.initialTime ?? '';
     this.endTime = event?.endTime ?? '';
     this.categoryId = event?.categoryId ?? '';
     this.notes = event?.notes ?? '';
