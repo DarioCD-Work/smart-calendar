@@ -6,10 +6,11 @@ import { CalendarEvent } from '../../../models/calendar-event.model';
 import { EventCategory } from '../../../models/event-category.model';
 import { RecurrenceRule } from '../../../models/calendar-event.model';
 import { parseCalendarDate } from '../../../services/calendar-date.service';
+import { GoogleEventDetailComponent } from '../google-event-detail/google-event-detail.component';
 
 @Component({
   selector: 'app-event-details-dialog',
-  imports: [ButtonModule, DialogModule],
+  imports: [ButtonModule, DialogModule, GoogleEventDetailComponent],
   templateUrl: './event-details-dialog.component.html',
   styleUrl: './event-details-dialog.component.css'
 })
@@ -42,6 +43,16 @@ export class EventDetailsDialogComponent implements OnChanges {
 
   get localEvent(): CalendarEvent | null {
     return this.occurrence?.event.source === 'local' ? this.occurrence.event.localEvent ?? null : null;
+  }
+
+  get isGoogleEvent(): boolean {
+    return this.occurrence?.event.source === 'google';
+  }
+
+  get googleDetailWidth(): string {
+    const event = this.occurrence?.event;
+    const complex = Boolean(event?.description?.trim() || event?.location?.trim() || event?.attachments?.length);
+    return complex ? 'min(640px, calc(100vw - 32px))' : 'min(480px, calc(100vw - 32px))';
   }
 
   formatDate(date: string): string {

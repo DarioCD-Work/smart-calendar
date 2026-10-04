@@ -1,0 +1,35 @@
+<fieldset class="weather-settings">
+  <legend>Tiempo</legend>
+  <label class="weather-toggle">
+    <input type="checkbox" [checked]="weather.enabled()" [disabled]="saving()"
+      (change)="configure($any($event.target).checked)" />
+    <span>Mostrar tiempo</span>
+  </label>
+  @if (weather.enabled()) {
+    <label for="weather-location-search">Ubicación</label>
+    @if (weather.location(); as location) {
+      <p class="chosen-location"><i class="pi pi-map-marker" aria-hidden="true"></i>{{ location.name }}</p>
+    }
+    <form class="location-search" (ngSubmit)="searchLocations()">
+      <input id="weather-location-search" name="weatherLocation" type="search" [(ngModel)]="query"
+        placeholder="Localidad" autocomplete="off" (ngModelChange)="results.set([])" />
+      <button type="submit" [disabled]="query.trim().length < 2 || searching() || saving()"
+        title="Buscar ubicación" aria-label="Buscar ubicación">
+        <i class="pi" [class.pi-search]="!searching()" [class.pi-spin]="searching()"
+          [class.pi-spinner]="searching()" aria-hidden="true"></i>
+      </button>
+    </form>
+    @if (results().length) {
+      <ul class="location-results" aria-label="Ubicaciones encontradas">
+        @for (location of results(); track location.latitude + ':' + location.longitude) {
+          <li><button type="button" [disabled]="saving()" (click)="configure(true, location)">
+            <i class="pi pi-map-marker" aria-hidden="true"></i><span>{{ location.name }}</span>
+          </button></li>
+        }
+      </ul>
+    }
+  }
+  @if (message() || weather.error(); as message) {
+    <p class="weather-message" role="status">{{ message }}</p>
+  }
+</fieldset>

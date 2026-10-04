@@ -1,0 +1,77 @@
+<div class="header-statuses">
+  @if (weather.enabled()) {
+    <button class="status-trigger weather-trigger" type="button" (click)="weatherPanel.toggle($event)"
+      [title]="weather.location()?.name || 'Configurar tiempo'" aria-label="Tiempo y previsión del día"
+      [class.is-stale]="weather.stale() || weather.error()">
+      @if (weather.condition().symbol; as symbol) {
+        <span class="weather-symbol" aria-hidden="true">{{ symbol }}</span>
+      } @else {
+        <i [class]="'pi ' + weather.condition().icon" aria-hidden="true"></i>
+      }
+      @if (weather.snapshot(); as data) {
+        <span class="current-temperature">{{ data.temperature | number:'1.0-0' }}°</span>
+        <span class="weather-range">{{ data.minimum | number:'1.0-0' }}° / {{ data.maximum | number:'1.0-0' }}°</span>
+        @if (weather.stale() || weather.error()) { <i class="pi pi-clock stale-mark" aria-hidden="true"></i> }
+      } @else {
+        <span class="status-copy">{{ weather.loading() ? 'Tiempo…' : 'Tiempo' }}</span>
+      }
+    </button>
+  }
+  @if (google.syncAccounts().length) {
+    <button class="status-trigger sync-trigger" type="button" (click)="googlePanel.toggle($event)"
+      [class.needs-attention]="attention()" [title]="presentation().label"
+      [attr.aria-label]="presentation().label + (relativeSync() ? ': ' + relativeSync() : '')">
+      <i [class]="'pi ' + presentation().icon" [class.pi-spin]="google.syncStatus() === 'syncing'" aria-hidden="true"></i>
+      <span class="status-copy">{{ attention() ? (google.syncStatus() === 'auth-required' ? 'Reconectar' : google.syncStatus() === 'offline' ? 'Sin conexión' : 'Error Google') : 'Google' }}</span>
+      @if (google.syncStatus() === 'success') { <span class="sync-age">{{ relativeSync() }}</span> }
+    </button>
+  }
+</div>
+<p-popover #weatherPanel appendTo="body" [style]="{ width: 'min(300px, calc(100vw - 24px))' }">
+  <section class="status-panel weather-panel" aria-label="Detalle del tiempo">
+    <h2>{{ weather.location()?.name || 'Tiempo' }}</h2>
+    @if (weather.snapshot(); as data) {
+      <div class="weather-current">
+        @if (weather.condition().symbol; as symbol) {
+          <span class="weather-symbol" aria-hidden="true">{{ symbol }}</span>
+        } @else {
+          <i [class]="'pi ' + weather.condition().icon" aria-hidden="true"></i>
+        }
+        <strong>{{ data.temperature | number:'1.0-0' }}°C</strong></div>
+      <p>{{ weather.condition().label }}</p>
+      <dl class="weather-values"><div><dt>Máx.</dt><dd>{{ data.maximum | number:'1.0-0' }}°</dd></div>
+        <div><dt>Mín.</dt><dd>{{ data.minimum | number:'1.0-0' }}°</dd></div>
+        @if (data.rainProbability !== undefined) { <div><dt>Lluvia</dt><dd>{{ data.rainProbability }} %</dd></div> }
+      </dl>
+      <p class="status-muted">Actualizado: {{ data.updatedAt | date:'HH:mm' }}</p>
+      @if (weather.stale() || weather.error()) { <p class="status-warning">Último dato disponible. Sin actualizar.</p> }
+    } @else {
+      <p class="status-muted">{{ weather.loading() ? 'Actualizando…' : weather.location() ? 'Tiempo no disponible por ahora.' : 'Sin ubicación configurada.' }}</p>
+    }
+    <button class="panel-action" type="button" (click)="weatherPanel.hide(); settingsRequested.emit()">
+      <i class="pi pi-map-marker" aria-hidden="true"></i>Ubicación
+    </button>
+    <a class="weather-attribution" href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo · GeoNames</a>
+  </section>
+</p-popover>
+<p-popover #googlePanel appendTo="body" [style]="{ width: 'min(360px, calc(100vw - 24px))' }">
+  <section class="status-panel" aria-label="Estado de Google Calendar">
+    <h2>Google Calendar</h2>
+    <p [class.status-warning]="attention()"><i [class]="'pi ' + presentation().icon" aria-hidden="true"></i> {{ presentation().label }}</p>
+    <p class="status-muted">Última actualización:
+      {{ google.lastSuccessfulSync() ? (google.lastSuccessfulSync() | date:'HH:mm') : 'Sin actualización completa todavía' }}</p>
+    <ul class="sync-accounts">
+      @for (account of google.syncAccounts(); track account.accountId) {
+        <li><strong>{{ account.email }}</strong><span>{{ statusLabel(account.status) }}</span>
+          @if (account.lastSuccessfulSync) { <small>{{ account.lastSuccessfulSync | date:'HH:mm' }}</small> }
+          @if (account.status === 'auth-required') {
+            <button class="panel-action" type="button" (click)="googlePanel.hide(); reconnectRequested.emit(account.accountId)">
+              <i class="pi pi-refresh" aria-hidden="true"></i>Reconectar
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    <p class="status-muted">{{ google.syncStatus() === 'offline' ? 'Se reanudará cuando vuelva la conexión.' : nextSyncMinutes() ? 'Próxima actualización automática: aproximadamente en ' + nextSyncMinutes() + ' min' : 'La próxima actualización se programará al terminar.' }}</p>
+  </section>
+</p-popover>

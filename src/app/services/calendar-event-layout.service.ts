@@ -10,11 +10,12 @@ export class CalendarEventLayoutService {
   getMultiDaySegments(
     occurrences: readonly CalendarDisplayOccurrence[],
     rangeStart: string,
-    rangeEnd: string
+    rangeEnd: string,
+    rowLengths?: readonly number[]
   ): CalendarEventSegment[] {
     const pendingSegments = occurrences
       .filter((occurrence) => occurrence.endDate > occurrence.startDate)
-      .flatMap((occurrence) => this.splitOccurrence(occurrence, rangeStart, rangeEnd))
+      .flatMap((occurrence) => this.splitOccurrence(occurrence, rangeStart, rangeEnd, rowLengths))
       .sort((first, second) => first.weekIndex - second.weekIndex
         || first.startColumn - second.startColumn
         || second.endColumn - first.endColumn
@@ -59,7 +60,8 @@ export class CalendarEventLayoutService {
   private splitOccurrence(
     occurrence: CalendarDisplayOccurrence,
     rangeStart: string,
-    rangeEnd: string
+    rangeEnd: string,
+    rowLengths?: readonly number[]
   ): PendingSegment[] {
     const visibleStart = compareCalendarDates(occurrence.startDate, rangeStart) < 0
       ? rangeStart
@@ -72,17 +74,21 @@ export class CalendarEventLayoutService {
       return [];
     }
 
-    const firstVisibleOffset = calendarDateOrdinal(visibleStart) - calendarDateOrdinal(rangeStart);
-    const lastVisibleOffset = calendarDateOrdinal(visibleEnd) - calendarDateOrdinal(rangeStart);
-    const firstWeek = Math.floor(firstVisibleOffset / 7);
-    const lastWeek = Math.floor(lastVisibleOffset / 7);
+    const dayCount = calendarDateOrdinal(rangeEnd) - calendarDateOrdinal(rangeStart) + 1;
+    const rows = rowLengths ?? Array.from({ length: Math.ceil(dayCount / 7) }, () => 7);
     const segments: PendingSegment[] = [];
 
-    for (let weekIndex = firstWeek; weekIndex <= lastWeek; weekIndex += 1) {
-      const weekStart = addCalendarDays(rangeStart, weekIndex * 7);
-      const weekEnd = addCalendarDays(weekStart, 6);
+    let rowOffset = 0;
+    for (let weekIndex = 0; weekIndex < rows.length; weekIndex += 1) {
+      const weekStart = addCalendarDays(rangeStart, rowOffset);
+      const weekEnd = addCalendarDays(weekStart, rows[weekIndex] - 1);
+      rowOffset += rows[weekIndex];
       const segmentStart = compareCalendarDates(visibleStart, weekStart) > 0 ? visibleStart : weekStart;
       const segmentEnd = compareCalendarDates(visibleEnd, weekEnd) < 0 ? visibleEnd : weekEnd;
+
+      if (segmentStart > segmentEnd) {
+        continue;
+      }
 
       segments.push({
         eventId: occurrence.eventId,

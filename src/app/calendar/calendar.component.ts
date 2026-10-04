@@ -1,18 +1,20 @@
-import { AfterViewInit, Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CalendarEvent, CalendarEventDraft, CalendarDate } from '../models/calendar-event.model';
-import { CalendarEventOccurrence } from '../models/calendar-event-occurrence.model';
 import { CalendarDisplayEvent, CalendarDisplayOccurrence } from '../models/calendar-display-event.model';
 import { CalendarEventSegment } from '../models/calendar-event-segment.model';
 import { GoogleCalendarAccountView } from '../models/google-account.model';
 import { CalendarEventService } from '../services/calendar-event.service';
 import { CalendarEventLayoutService } from '../services/calendar-event-layout.service';
-import { CalendarRecurrenceService } from '../services/calendar-recurrence.service';
+import { CalendarVisibleEventsService } from '../services/calendar-visible-events.service';
 import { CalendarSourceService } from '../services/calendar-source.service';
 import { GoogleCalendarService } from '../services/google-calendar.service';
-import { addCalendarDays, compareCalendarDates } from '../services/calendar-date.service';
+import { GoogleEventFilterService } from '../services/google-event-filter.service';
+import { CalendarViewPreferenceService } from '../services/calendar-view-preference.service';
+import { CalendarViewMode } from '../models/calendar-view-mode.model';
+import { addCalendarDays, compareCalendarDates, formatCalendarDate, parseCalendarDate } from '../services/calendar-date.service';
 import { CalendarDay } from './calendar-day.model';
-import { generateCalendarDays } from './calendar-date.utils';
+import { formatCalendarRange, generateViewDays, viewRowLengths } from './calendar-view.utils';
 import { EventEditorDialogComponent } from './components/event-editor-dialog/event-editor-dialog.component';
 import { EventDetailsDialogComponent } from './components/event-details-dialog/event-details-dialog.component';
 import { DayEventsDialogComponent } from './components/day-events-dialog/day-events-dialog.component';
@@ -21,6 +23,9 @@ import {
   CategorySettingsDialogComponent
 } from './components/category-settings-dialog/category-settings-dialog.component';
 import { CalendarSourcesDialogComponent } from './components/calendar-sources-dialog/calendar-sources-dialog.component';
+import { CalendarAgendaDay, CalendarAgendaViewComponent } from './components/calendar-agenda-view/calendar-agenda-view.component';
+import { CalendarHeaderStatusComponent } from './components/header-status/header-status.component';
+import { TodaySummaryComponent } from './components/today-summary/today-summary.component';
 
 interface CalendarDayView {
   day: CalendarDay;
@@ -40,6 +45,9 @@ interface CalendarWeekView {
   selector: 'app-calendar',
   imports: [
     ButtonModule,
+    CalendarHeaderStatusComponent,
+    TodaySummaryComponent,
+    CalendarAgendaViewComponent,
     CalendarSourcesDialogComponent,
     CategorySettingsDialogComponent,
     DayEventsDialogComponent,
@@ -49,28 +57,54 @@ interface CalendarWeekView {
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.css'
 })
-export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CalendarComponent implements OnInit, OnDestroy {
   readonly weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
   private readonly eventService = inject(CalendarEventService);
-  private readonly recurrenceService = inject(CalendarRecurrenceService);
+  private readonly visibleEventsService = inject(CalendarVisibleEventsService);
   private readonly eventLayoutService = inject(CalendarEventLayoutService);
   private readonly sourceService = inject(CalendarSourceService);
   private readonly googleCalendarService = inject(GoogleCalendarService);
+  private readonly googleEventFilterService = inject(GoogleEventFilterService);
+  private readonly viewPreferenceService = inject(CalendarViewPreferenceService);
   private readonly today = new Date();
-  private readonly displayedMonth = signal(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
+  private readonly anchorDate = signal(new Date(this.today.getFullYear(), this.today.getMonth(), this.today.getDate()));
   private readonly selectedDate = signal<Date | null>(this.today);
   private readonly gridHeight = signal(0);
   private readonly gridWidth = signal(0);
   private resizeObserver?: ResizeObserver;
   private destroyed = false;
 
-  @ViewChild('daysGrid') private daysGrid?: ElementRef<HTMLDivElement>;
+  private daysGrid?: ElementRef<HTMLDivElement>;
+
+  @ViewChild('daysGrid') set calendarGrid(element: ElementRef<HTMLDivElement> | undefined) {
+    this.resizeObserver?.disconnect();
+    this.daysGrid = element;
+    if (!element || this.destroyed || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.resizeObserver = new ResizeObserver(([entry]) => {
+      this.gridHeight.set(entry.contentRect.height);
+      this.gridWidth.set(entry.contentRect.width);
+    });
+    this.resizeObserver.observe(element.nativeElement);
+    queueMicrotask(() => {
+      if (!this.destroyed && this.daysGrid === element) {
+        const bounds = element.nativeElement.getBoundingClientRect();
+        this.gridHeight.set(bounds.height);
+        this.gridWidth.set(bounds.width);
+      }
+    });
+  }
 
   readonly categories = this.eventService.categories;
+  readonly viewMode = this.viewPreferenceService.viewMode;
   readonly googleCalendarError = this.googleCalendarService.error;
   readonly googleCalendarLoading = this.googleCalendarService.loading;
   readonly googleCalendarConfigured = this.googleCalendarService.isConfigured;
+  readonly googleEventFilters = this.googleEventFilterService.filters;
+  readonly knownGoogleEvents = this.googleCalendarService.knownEvents;
+  readonly googleFilterError = signal<string | null>(null);
   readonly storageError = signal<string | null>(null);
   readonly editorError = signal<string | null>(null);
   readonly editorVisible = signal(false);
@@ -83,21 +117,29 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly calendarSourcesVisible = signal(false);
 
   readonly monthLabel = computed(() => {
+    if (this.viewMode() !== 'month') {
+      const days = this.days();
+      return formatCalendarRange(days[0].date, days[days.length - 1].date);
+    }
     const label = new Intl.DateTimeFormat('es-ES', {
       month: 'long',
       year: 'numeric'
-    }).format(this.displayedMonth());
+    }).format(this.anchorDate());
 
     return label.charAt(0).toLocaleUpperCase('es-ES') + label.slice(1);
   });
 
-  readonly days = computed(() => generateCalendarDays(
-    this.displayedMonth(),
+  readonly days = computed(() => generateViewDays(
+    this.viewMode(),
+    this.anchorDate(),
     this.today,
     this.selectedDate()
   ));
 
-  readonly weekCount = computed(() => this.days().length / 7);
+  readonly rowLengths = computed(() => viewRowLengths(this.viewMode(), this.days().length));
+  readonly weekCount = computed(() => this.rowLengths().length);
+  readonly previousPeriodLabel = computed(() => this.viewMode() === 'month' ? 'Mes anterior' : 'Periodo anterior');
+  readonly nextPeriodLabel = computed(() => this.viewMode() === 'month' ? 'Mes siguiente' : 'Periodo siguiente');
 
   readonly localEventOccurrences = computed<CalendarDisplayOccurrence[]>(() => {
     const days = this.days();
@@ -106,20 +148,15 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
       return [];
     }
 
-    const localOccurrences = this.recurrenceService.getOccurrences(
-      this.eventService.events(),
-      days[0].dateKey,
-      days[days.length - 1].dateKey
-    );
-
-    return localOccurrences
-      .filter((occurrence) => this.sourceService.isLocalCalendarVisible(occurrence.event.categoryId))
-      .map((occurrence) => this.toLocalDisplayOccurrence(occurrence));
+    return this.visibleEventsService.localOccurrences(days[0].dateKey, days[days.length - 1].dateKey);
   });
+
+  readonly allGoogleEvents = this.googleCalendarService.occurrences.asReadonly();
+  readonly visibleGoogleEvents = computed(() => this.visibleEventsService.googleOccurrences(this.allGoogleEvents()));
 
   readonly eventOccurrences = computed(() => [
     ...this.localEventOccurrences(),
-    ...this.googleCalendarService.occurrences()
+    ...this.visibleGoogleEvents()
   ]);
 
   readonly occurrencesByDate = computed(() => {
@@ -157,13 +194,15 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
       : this.eventLayoutService.getMultiDaySegments(
         this.eventOccurrences(),
         days[0].dateKey,
-        days[days.length - 1].dateKey
+        days[days.length - 1].dateKey,
+        this.rowLengths()
       );
   });
 
   readonly weeks = computed<CalendarWeekView[]>(() => {
     const days = this.days();
-    const weekCount = days.length / 7;
+    const rowLengths = this.rowLengths();
+    const weekCount = rowLengths.length;
     const weekHeight = this.gridHeight() / weekCount;
     const compactLayout = this.gridWidth() <= 520;
     const eventAreaTop = compactLayout ? 44 : 54;
@@ -185,7 +224,8 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
       const visibleLaneCount = Math.min(laneCount, laneCapacity);
       const visibleSegments = weekSegments.filter((segment) => segment.lane < visibleLaneCount);
       const hiddenSegments = weekSegments.filter((segment) => segment.lane >= visibleLaneCount);
-      const weekDays = days.slice(weekIndex * 7, weekIndex * 7 + 7);
+      const rowOffset = rowLengths.slice(0, weekIndex).reduce((sum, length) => sum + length, 0);
+      const weekDays = days.slice(rowOffset, rowOffset + rowLengths[weekIndex]);
 
       return {
         index: weekIndex,
@@ -194,6 +234,10 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
         days: weekDays.map((day, columnIndex) => {
           const dateOccurrences = occurrencesByDate.get(day.dateKey) ?? [];
           const singles = dateOccurrences.filter((occurrence) => occurrence.startDate === occurrence.endDate);
+          if (this.viewMode() !== 'month') {
+            singles.sort((first, second) => Number(second.event.allDay) - Number(first.event.allDay)
+              || (first.event.startTime ?? first.event.endTime ?? '').localeCompare(second.event.startTime ?? second.event.endTime ?? ''));
+          }
           const hasHiddenSegments = hiddenSegments.some((segment) =>
             columnIndex >= segment.startColumn && columnIndex <= segment.endColumn
           );
@@ -234,6 +278,19 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     return date ? this.occurrencesByDate().get(date) ?? [] : [];
   });
 
+  readonly agendaDays = computed<CalendarAgendaDay[]>(() => {
+    const grouped = this.occurrencesByDate();
+    return this.days()
+      .filter((day) => day.isToday || (grouped.get(day.dateKey)?.length ?? 0) > 0)
+      .map((day) => ({
+        day,
+        events: [...(grouped.get(day.dateKey) ?? [])].sort((first, second) =>
+          Number(second.event.allDay) - Number(first.event.allDay)
+          || (first.event.startTime ?? first.event.endTime ?? '').localeCompare(second.event.startTime ?? second.event.endTime ?? '')
+          || first.event.title.localeCompare(second.event.title, 'es'))
+      }));
+  });
+
   readonly localCalendarViews = computed(() => this.sourceService.getLocalCalendarViews(this.categories()));
   readonly googleCalendarAccounts = computed<GoogleCalendarAccountView[]>(() =>
     this.sourceService.getGoogleAccountViews(this.googleCalendarService.connectedAccountIds())
@@ -244,21 +301,6 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     void this.initializeCalendarSources();
   }
 
-  ngAfterViewInit(): void {
-    if (!this.daysGrid || typeof ResizeObserver === 'undefined') {
-      return;
-    }
-
-    this.resizeObserver = new ResizeObserver(([entry]) => {
-      this.gridHeight.set(entry.contentRect.height);
-      this.gridWidth.set(entry.contentRect.width);
-    });
-    this.resizeObserver.observe(this.daysGrid.nativeElement);
-    const gridBounds = this.daysGrid.nativeElement.getBoundingClientRect();
-    this.gridHeight.set(gridBounds.height);
-    this.gridWidth.set(gridBounds.width);
-  }
-
   ngOnDestroy(): void {
     this.destroyed = true;
     this.resizeObserver?.disconnect();
@@ -266,14 +308,20 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   navigateMonth(offset: number): void {
-    const currentMonth = this.displayedMonth();
-    this.displayedMonth.set(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
+    const anchor = this.anchorDate();
+    if (this.viewMode() === 'month') {
+      const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + offset + 1, 0).getDate();
+      this.anchorDate.set(new Date(anchor.getFullYear(), anchor.getMonth() + offset, Math.min(anchor.getDate(), lastDay)));
+    } else {
+      const step = this.viewMode() === 'week' ? 7 : this.viewMode() === '15-days' ? 15 : 30;
+      this.anchorDate.set(parseCalendarDate(addCalendarDays(formatCalendarDate(anchor), offset * step)));
+    }
     this.selectedDate.set(null);
     void this.refreshGoogleEvents();
   }
 
   goToToday(): void {
-    this.displayedMonth.set(new Date(this.today.getFullYear(), this.today.getMonth(), 1));
+    this.anchorDate.set(new Date(this.today.getFullYear(), this.today.getMonth(), this.today.getDate()));
     this.selectedDate.set(this.today);
     void this.refreshGoogleEvents();
   }
@@ -282,7 +330,7 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     this.selectedDate.set(day.date);
 
     if (!day.isCurrentMonth) {
-      this.displayedMonth.set(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+      this.anchorDate.set(day.date);
       void this.refreshGoogleEvents();
     }
   }
@@ -391,6 +439,23 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     this.categorySettingsVisible.set(true);
   }
 
+  async changeViewMode(mode: CalendarViewMode): Promise<void> {
+    if (mode === this.viewMode()) {
+      return;
+    }
+    const selected = this.selectedDate();
+    if (selected && this.days().some((day) => day.dateKey === formatCalendarDate(selected))) {
+      this.anchorDate.set(selected);
+    }
+    const savePreference = this.viewPreferenceService.selectView(mode);
+    void this.refreshGoogleEvents();
+    try {
+      await savePreference;
+    } catch {
+      this.categorySettingsError.set('No se pudo guardar la vista del calendario.');
+    }
+  }
+
   openCalendarSources(): void {
     this.calendarSourcesVisible.set(true);
   }
@@ -422,6 +487,12 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     return event.allDay ? '' : event.startTime ?? event.endTime ?? '';
   }
 
+  rangeDayLabel(day: CalendarDay): string {
+    const weekday = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(day.date);
+    const month = new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(day.date);
+    return `${weekday} · ${month}`;
+  }
+
   async setLocalCalendarVisibility(categoryId: string, visible: boolean): Promise<void> {
     try {
       await this.sourceService.setLocalCalendarVisibility(categoryId, visible);
@@ -435,6 +506,24 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
       await this.googleCalendarService.setCalendarVisibility(calendarId, visible);
     } catch {
       this.googleCalendarService.error.set('No se pudo guardar la preferencia del calendario Google.');
+    }
+  }
+
+  async hideGoogleEventTitle(change: { accountId: string; calendarId?: string; title: string }): Promise<void> {
+    try {
+      await this.googleEventFilterService.hideTitle(change.accountId, change.calendarId, change.title);
+      this.googleFilterError.set(null);
+    } catch {
+      this.googleFilterError.set('No se pudo guardar el filtro de eventos.');
+    }
+  }
+
+  async removeGoogleEventFilter(id: string): Promise<void> {
+    try {
+      await this.googleEventFilterService.removeFilter(id);
+      this.googleFilterError.set(null);
+    } catch {
+      this.googleFilterError.set('No se pudo eliminar el filtro de eventos.');
     }
   }
 
@@ -456,8 +545,15 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async initializeCalendarSources(): Promise<void> {
+    await this.viewPreferenceService.initialize().catch(() => {
+      this.categorySettingsError.set('No se pudo cargar la vista del calendario.');
+    });
     await this.eventService.initialize().catch(() => {
       this.storageError.set('No se pudo abrir el almacenamiento local de eventos.');
+    });
+
+    await this.googleEventFilterService.initialize().catch(() => {
+      this.googleFilterError.set('No se pudieron cargar los filtros de eventos.');
     });
 
     try {
@@ -476,34 +572,6 @@ export class CalendarComponent implements OnInit, AfterViewInit, OnDestroy {
     if (days.length > 0) {
       await this.googleCalendarService.refreshVisibleEvents(days[0].dateKey, days[days.length - 1].dateKey);
     }
-  }
-
-  private toLocalDisplayOccurrence(occurrence: CalendarEventOccurrence): CalendarDisplayOccurrence {
-    const category = this.categories().find((item) => item.id === occurrence.event.categoryId);
-    const displayEvent: CalendarDisplayEvent = {
-      id: occurrence.event.id,
-      source: 'local',
-      title: occurrence.event.title,
-      startDate: occurrence.startDate,
-      endDate: occurrence.endDate,
-      startTime: occurrence.event.startTime,
-      endTime: occurrence.event.endTime,
-      allDay: occurrence.event.allDay,
-      categoryId: occurrence.event.categoryId,
-      recurrence: occurrence.event.recurrence,
-      color: category?.color,
-      calendarName: category?.name ?? 'Local',
-      description: occurrence.event.notes,
-      localEvent: occurrence.event
-    };
-
-    return {
-      eventId: `local:${occurrence.eventId}:${occurrence.startDate}`,
-      occurrenceKey: `${occurrence.eventId}:${occurrence.startDate}`,
-      event: displayEvent,
-      startDate: occurrence.startDate,
-      endDate: occurrence.endDate
-    };
   }
 
   onDayCellKeydown(event: KeyboardEvent, day: CalendarDay): void {

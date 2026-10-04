@@ -1,0 +1,34 @@
+:host { display: block; min-width: 0; }
+.header-statuses { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.status-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 4px 6px; border: 0; border-radius: 4px; color: #65756e; background: transparent; cursor: pointer; touch-action: manipulation; font-size: 12px; white-space: nowrap; }
+.status-trigger:hover { background: #e4ece7; }
+.weather-trigger > .pi:first-child { color: #b88b33; font-size: 18px; }
+.weather-symbol { display: inline-grid; width: 22px; height: 24px; place-items: center; font-size: 18px; }
+.weather-current .weather-symbol { width: 36px; height: 36px; font-size: 28px; }
+.current-temperature { color: #193a36; font-size: 16px; font-weight: 600; }
+.weather-range, .sync-age { font-size: 11px; }
+.sync-age { text-transform: lowercase; }
+.needs-attention { color: #a16230; }
+.is-stale .current-temperature { color: #65756e; }
+.stale-mark { font-size: 10px; }
+.status-panel { max-height: min(70dvh, 500px); overflow-y: auto; color: #193a36; font-size: 14px; }
+.status-panel h2 { margin: 0 0 12px; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.status-panel p { margin: 10px 0; line-height: 1.5; }
+.status-muted { color: #65756e; font-size: 12px; }
+.status-warning { color: #a16230; font-size: 13px; }
+.weather-current { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.weather-current .pi { color: #b88b33; font-size: 28px; }
+.weather-current strong { font-size: 30px; font-weight: 500; }
+.weather-values { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; }
+.weather-values div { display: grid; gap: 4px; }
+.weather-values dt { font-size: 12px; color: #65756e; }
+.weather-values dd { margin: 0; font-size: 16px; }
+.panel-action { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 10px 0; padding: 8px 12px; border: 1px solid #c9d6ce; border-radius: 4px; color: #244b45; background: #f4f7f5; font-size: 14px; cursor: pointer; touch-action: manipulation; }
+.weather-attribution { display: block; margin-top: 12px; color: #65756e; font-size: 11px; }
+.sync-accounts { list-style: none; margin: 12px 0; padding: 0; }
+.sync-accounts li { display: grid; gap: 5px; padding: 12px 0; border-block: 1px solid #e1e8e4; }
+.sync-accounts strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.sync-accounts span, .sync-accounts small { font-size: 12px; color: #65756e; }
+@media (max-width: 1100px) { .sync-age { display: none; } }
+@media (max-width: 960px) { .weather-range { display: none; } }
+@media (max-width: 640px) { .status-copy { display: none; } .header-statuses { gap: 0; } .status-trigger { padding-inline: 4px; } }

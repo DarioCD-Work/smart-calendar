@@ -1,0 +1,135 @@
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+}
+
+.agenda-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 14px 24px;
+  background: #fff;
+  color: #193a36;
+}
+
+.agenda-day {
+  padding-bottom: 16px;
+}
+
+.agenda-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  border-bottom: 1px solid #d6e0da;
+}
+
+.agenda-day-header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.today-label {
+  color: #397b5a;
+  font-weight: 700;
+}
+
+.agenda-add {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 0;
+  border-radius: 5px;
+  background: #edf3ef;
+  color: #315448;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.agenda-events {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+}
+
+.agenda-event {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 52px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--event-color) 30%, white);
+  border-left: 4px solid var(--event-color);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--event-color) 10%, white);
+  color: #193a36;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.agenda-time {
+  flex: 0 0 90px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-event-copy {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+.agenda-event-copy strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.agenda-event-copy small {
+  color: #52675e;
+  font-size: 12px;
+}
+
+.agenda-empty,
+.agenda-empty-range {
+  margin: 0;
+  padding: 12px 0;
+  color: #65756e;
+  font-size: 15px;
+}
+
+.agenda-event:focus-visible,
+.agenda-add:focus-visible {
+  outline: 2px solid #d96f4f;
+  outline-offset: -2px;
+}
+
+@media (max-width: 520px) {
+  .agenda-scroll {
+    padding-inline: 9px;
+  }
+
+  .agenda-day-header h2 {
+    font-size: 13px;
+  }
+
+  .agenda-event {
+    gap: 8px;
+    padding-inline: 8px;
+  }
+
+  .agenda-time {
+    flex-basis: 74px;
+    font-size: 12px;
+  }
+}

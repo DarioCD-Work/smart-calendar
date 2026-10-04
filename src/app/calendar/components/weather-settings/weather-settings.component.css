@@ -1,0 +1,14 @@
+.weather-settings { min-width: 0; margin: 0 0 20px; padding: 0; border: 0; color: #193a36; }
+legend { margin-bottom: 8px; color: #52675e; font-size: 13px; font-weight: 600; }
+.weather-toggle { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.weather-toggle input { width: 20px; height: 20px; accent-color: #244b45; }
+label { font-size: 14px; }
+.chosen-location { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 14px; overflow-wrap: anywhere; }
+.location-search { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; margin-top: 8px; }
+.location-search input { min-width: 0; min-height: 44px; padding: 8px 10px; border: 1px solid #c9d6ce; border-radius: 4px; font: inherit; font-size: 14px; background: white; color: #193a36; }
+button { min-height: 44px; border: 1px solid #c9d6ce; border-radius: 4px; background: #f4f7f5; color: #244b45; cursor: pointer; touch-action: manipulation; }
+button:disabled { opacity: .55; cursor: default; }
+.location-results { list-style: none; margin: 8px 0 0; padding: 0; }
+.location-results button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-bottom: 1px solid #e1e8e4; border-radius: 0; text-align: left; background: transparent; font-size: 14px; }
+.location-results span { overflow-wrap: anywhere; }
+.weather-message { color: #7b6350; font-size: 13px; line-height: 1.5; margin: 8px 0; }

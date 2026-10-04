@@ -177,3 +177,116 @@
     gap: 2px;
   }
 }
+
+.hidden-events {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0 4px 12px;
+}
+
+.hidden-events h3 {
+  margin: 0;
+  color: #52675e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hidden-event-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  border-bottom: 1px solid #e5ebe7;
+}
+
+.hidden-event-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  overflow-wrap: anywhere;
+  color: #193a36;
+  font-size: 14px;
+}
+
+.hidden-event-copy small {
+  color: #65756e;
+  font-size: 12px;
+}
+
+:host ::ng-deep .hidden-events .p-button {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+:host ::ng-deep .hidden-events-dialog .p-dialog-content {
+  padding: 4px 20px 18px;
+  overflow-x: hidden;
+}
+
+.hidden-events-controls {
+  display: grid;
+  gap: 14px;
+}
+
+.filter-account-email {
+  margin: 0;
+  color: #65756e;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.filter-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #193a36;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid #b8c7bf;
+  border-radius: 5px;
+  color: #193a36;
+  background: white;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.hidden-title-list {
+  max-height: min(38dvh, 360px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.hidden-title-option {
+  display: flex;
+  gap: 12px;
+  min-height: 48px;
+  align-items: center;
+  padding: 6px 2px;
+  border-bottom: 1px solid #e5ebe7;
+  color: #193a36;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.hidden-title-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.hidden-title-option input {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  accent-color: #397b5a;
+}

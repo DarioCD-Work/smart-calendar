@@ -1,0 +1,89 @@
+<div class="google-detail" [style.--detail-color]="event().color ?? event().calendarColor ?? '#4285F4'">
+  <section class="date-section" aria-label="Fecha y hora">
+    <div class="detail-row">
+      <i class="pi pi-calendar" aria-hidden="true"></i>
+      <div class="date-content">
+        <p>{{ formatDate(occurrence().startDate) }}</p>
+        @if (occurrence().endDate !== occurrence().startDate) {
+          <i class="pi pi-arrow-down range-arrow" aria-hidden="true"></i>
+          <p>{{ formatDate(occurrence().endDate) }}</p>
+        }
+      </div>
+    </div>
+    @if (event().allDay || event().startTime || event().endTime) {
+      <div class="detail-row time-row">
+        <i class="pi pi-clock" aria-hidden="true"></i>
+        <p>
+          @if (event().allDay) {
+            Todo el día
+          } @else {
+            {{ event().startTime ?? '' }}
+            @if (event().startTime && event().endTime) { <span>–</span> }
+            {{ event().endTime ?? '' }}
+          }
+        </p>
+      </div>
+    }
+  </section>
+
+  @if (mapsUrl(); as url) {
+    <section class="detail-section">
+      <h2><i class="pi pi-map-marker" aria-hidden="true"></i> Ubicación</h2>
+      <a class="location-text" [href]="url" target="_blank" rel="noopener noreferrer">{{ location() }}</a>
+      <a class="external-action" [href]="url" target="_blank" rel="noopener noreferrer">
+        Ver en Google Maps <i class="pi pi-external-link" aria-hidden="true"></i>
+      </a>
+    </section>
+  }
+
+  @if (attachments().length) {
+    <section class="detail-section">
+      <h2><i class="pi pi-paperclip" aria-hidden="true"></i> Adjuntos</h2>
+      <div class="attachments">
+        @for (attachment of attachments(); track $index) {
+          <div class="attachment">
+            @if (attachment.image) {
+              <a [href]="attachment.url" target="_blank" rel="noopener noreferrer" class="image-link">
+                <img class="attachment-image" [src]="attachment.url" [alt]="attachment.title"
+                  loading="lazy" referrerpolicy="no-referrer" (error)="imageFailed(attachment.url)" />
+              </a>
+            }
+            <a class="attachment-link" [href]="attachment.url" target="_blank" rel="noopener noreferrer">
+              <i class="pi pi-paperclip" aria-hidden="true"></i>
+              <span>{{ attachment.title }}</span>
+              <i class="pi pi-external-link" aria-hidden="true"></i>
+            </a>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (paragraphs().length) {
+    <section class="detail-section description-section">
+      <h2><i class="pi pi-align-left" aria-hidden="true"></i> Descripción</h2>
+      <div class="description-content">
+        @for (paragraph of paragraphs(); track $index) {
+          <p>@for (part of paragraph; track $index) {@if (part.href) {<a class="description-link" [href]="part.href" [title]="part.href" target="_blank" rel="noopener noreferrer">{{ part.text }}<i class="pi pi-external-link" aria-hidden="true"></i></a>} @else {<span>{{ part.text }}</span>}}</p>
+        }
+      </div>
+    </section>
+  }
+
+  <footer class="google-origin">
+    <div class="origin-heading">
+      <span class="google-badge" aria-hidden="true">G</span>
+      <div class="origin-content">
+        <strong>Google Calendar</strong>
+        @if (accountEmail()) { <span>{{ accountEmail() }}</span> }
+        @if (calendarName()) { <span>Calendario: {{ calendarName() }}</span> }
+        @if (event().isRecurring) { <small>Ocurrencia de un evento recurrente</small> }
+      </div>
+    </div>
+    @if (calendarUrl(); as url) {
+      <a class="external-action calendar-action" [href]="url" target="_blank" rel="noopener noreferrer">
+        Abrir en Google Calendar <i class="pi pi-external-link" aria-hidden="true"></i>
+      </a>
+    }
+  </footer>
+</div>

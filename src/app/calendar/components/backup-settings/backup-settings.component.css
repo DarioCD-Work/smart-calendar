@@ -1,0 +1,13 @@
+.backup-settings { margin: 24px 0 0; padding-top: 18px; border-top: 1px solid #e1e8e4; color: #193a36; }
+h2 { margin: 0 0 12px; color: #52675e; font-size: 13px; font-weight: 600; }
+.backup-buttons { display: grid; gap: 8px; }
+:host ::ng-deep .backup-buttons .p-button { width: 100%; min-height: 48px; border-radius: 4px; text-align: left; }
+:host ::ng-deep .backup-buttons .p-button-label { white-space: normal; overflow-wrap: anywhere; }
+.last-export { margin: 12px 0; font-size: 12px; color: #65756e; }
+.copy-date { margin: 0 0 14px; color: #52675e; font-size: 14px; }
+.backup-counts { padding-left: 20px; margin: 0 0 16px; font-size: 14px; line-height: 1.8; }
+.replace-warning { font-size: 14px; line-height: 1.6; color: #805c39; overflow-wrap: anywhere; }
+::ng-deep .backup-restore-dialog .p-dialog-content { overflow-x: hidden; overflow-y: auto; }
+::ng-deep .backup-restore-dialog .p-dialog-footer { flex-wrap: wrap; }
+::ng-deep .backup-restore-dialog .p-dialog-footer .p-button { min-height: 44px; }
+:host ::ng-deep .p-message { margin-top: 12px; }
